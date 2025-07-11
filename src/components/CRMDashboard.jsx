@@ -495,7 +495,7 @@ const CRMDashboard = () => {
     fetchData();
     
     // Refresh data every 30 seconds for real-time updates
-    const interval = setInterval(() => fetchData(true), 30 * 1000);
+    const interval = setInterval(() => fetchData(true), 5 * 60 * 1000); // 5 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -1006,7 +1006,7 @@ const CRMDashboard = () => {
           <li>• Click "📞 Update Lead" in column O to trigger lead updates</li>
           <li>• Check the bell icon for active alerts from your CRM system</li>
           <li>• Data syncs automatically with your Google Sheet</li>
-          <li>• Alerts refresh every 30 seconds automatically</li>
+          <li>• Alerts refresh every 5 minutes automatically</li>
           <li>• Click your profile icon to access account settings</li>
         </ul>
       </div>

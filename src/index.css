@@ -42,22 +42,23 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Prominent scrollbar styles for better usability on Chromebox */
 .sticky-table-container::-webkit-scrollbar {
-  width: 16px;  /* Wider scrollbar */
-  height: 16px; /* Taller horizontal scrollbar */
+  width: 24px;  /* Much wider scrollbar for touch */
+  height: 24px; /* Much taller horizontal scrollbar for touch */
 }
 
 .sticky-table-container::-webkit-scrollbar-track {
-  background: #e5e5e5;
-  border-radius: 8px;
-  border: 2px solid #d1d1d1;
+  background: #f0f0f0;
+  border-radius: 12px;
+  border: 3px solid #d1d1d1;
+  margin: 4px;
 }
 
 .sticky-table-container::-webkit-scrollbar-thumb {
   background: #3e2f1c;
-  border-radius: 8px;
-  border: 2px solid #2a1f12;
-  min-height: 20px; /* Minimum height for horizontal scrollbar */
-  min-width: 20px;  /* Minimum width for vertical scrollbar */
+  border-radius: 12px;
+  border: 3px solid #2a1f12;
+  min-height: 32px; /* Much larger minimum height for horizontal scrollbar */
+  min-width: 32px;  /* Much larger minimum width for vertical scrollbar */
 }
 
 .sticky-table-container::-webkit-scrollbar-thumb:hover {
@@ -65,15 +66,39 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #1a150d;
 }
 
+.sticky-table-container::-webkit-scrollbar-thumb:active {
+  background: #1a150d;
+  border-color: #0f0a06;
+}
+
 .sticky-table-container::-webkit-scrollbar-corner {
-  background: #e5e5e5;
-  border-radius: 8px;
+  background: #f0f0f0;
+  border-radius: 12px;
 }
 
 /* Firefox scrollbar styles */
 .sticky-table-container {
   scrollbar-width: auto;
-  scrollbar-color: #3e2f1c #e5e5e5;
+  scrollbar-color: #3e2f1c #f0f0f0;
+}
+
+/* Force scrollbars to always be visible */
+.sticky-table-container {
+  overflow: scroll !important;
+  scrollbar-gutter: stable;
+}
+
+/* Ensure horizontal scrollbar is always visible */
+.sticky-table-container::-webkit-scrollbar:horizontal {
+  height: 24px !important;
+}
+
+/* Make sure the scrollbar track is always visible */
+.sticky-table-container::-webkit-scrollbar-track:horizontal {
+  background: #f0f0f0 !important;
+  border: 3px solid #d1d1d1 !important;
+  border-radius: 12px !important;
+  margin: 4px !important;
 }
 
 .sticky-table-container table {

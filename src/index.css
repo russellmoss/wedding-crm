@@ -1,0 +1,352 @@
+@import url('https://fonts.googleapis.com/css2?family=Cochin:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Avenir:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Avenir', sans-serif;
+  background-color: #f5f1e3;
+  color: #3e2f1c;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cochin', serif;
+}
+
+/* Custom scrollbar for alert dropdown */
+.alert-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.alert-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.alert-scroll::-webkit-scrollbar-thumb {
+  background: #3e2f1c;
+  border-radius: 3px;
+}
+
+.alert-scroll::-webkit-scrollbar-thumb:hover {
+  background: #2a1f12;
+}
+
+/* Sticky table styles */
+.sticky-table-container {
+  position: relative;
+  overflow: auto;
+  max-height: 70vh;
+}
+
+.sticky-table-container table {
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-left: -1px; /* Pull entire table slightly left */
+}
+
+.sticky-table-container thead.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.sticky-table-container th.sticky,
+.sticky-table-container td.sticky {
+  position: sticky;
+}
+
+.sticky-table-container th.sticky {
+  background-color: #3e2f1c !important;
+}
+
+.sticky-table-container td.sticky {
+  background-color: white !important;
+}
+
+.sticky-table-container tr:hover td.sticky {
+  background-color: #f5f1e3 !important;
+}
+
+/* Specific positioning for First Name and Last Name columns */
+.sticky-table-container th:nth-child(3),
+.sticky-table-container td:nth-child(3) {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background-color: white !important;
+  border-right: none !important;
+  padding-right: 0 !important;
+}
+
+.sticky-table-container th:nth-child(3) {
+  background-color: #3e2f1c !important;
+}
+
+.sticky-table-container th:nth-child(4),
+.sticky-table-container td:nth-child(4) {
+  position: sticky;
+  left: 80px; /* Reduced further */
+  z-index: 20;
+  background-color: white !important;
+  border-left: none !important;
+  padding-left: 0 !important;
+  margin-left: -8px !important; /* Increased negative margin further */
+}
+
+.sticky-table-container th:nth-child(4) {
+  background-color: #3e2f1c !important;
+}
+
+.sticky-table-container th:nth-child(3),
+.sticky-table-container th:nth-child(4) {
+  z-index: 40;
+}
+
+/* Ensure sticky columns maintain background on hover */
+.sticky-table-container tr:hover td:nth-child(3),
+.sticky-table-container tr:hover td:nth-child(4) {
+  background-color: #f5f1e3 !important;
+}
+
+/* Dropdown improvements */
+.sticky-table-container select {
+  min-width: 180px;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sticky-table-container select option {
+  padding: 8px;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Ensure dropdown cells have enough width */
+.sticky-table-container td:nth-child(14), /* Column N - Lead Stage */
+.sticky-table-container td:nth-child(16), /* Column P - Lead status 1 */
+.sticky-table-container td:nth-child(17), /* Column Q - Lead status 2 */
+.sticky-table-container td:nth-child(18), /* Column R - Lead status 3 */
+.sticky-table-container td:nth-child(19) { /* Column S - Lead status 4 */
+  min-width: 200px;
+  max-width: 250px;
+}
+
+/* Lead Stage dropdown colors */
+.sticky-table-container select option[value="Hot"] {
+  background-color: #ffcfc9 !important;
+}
+
+.sticky-table-container select option[value="Hot - manual reply"] {
+  background-color: #B10202 !important;
+  color: white !important; /* White text for dark background */
+}
+
+.sticky-table-container select option[value="Warm - no call"] {
+  background-color: #ffb366 !important; /* Light orange */
+}
+
+.sticky-table-container select option[value="Warm - no tour"] {
+  background-color: #ffe5a0 !important;
+}
+
+.sticky-table-container select option[value="Cold"] {
+  background-color: #bfe1ff !important; /* Fixed the typo in your color code */
+}
+
+.sticky-table-container select option[value="Closed-Won"],
+.sticky-table-container select option[value="Closed-Lost"] {
+  background-color: #e6cff2 !important;
+}
+
+/* Selected dropdown value colors */
+.sticky-table-container select[data-value="Hot"] {
+  background-color: #ffcfc9 !important;
+}
+
+.sticky-table-container select[data-value="Hot - manual reply"] {
+  background-color: #B10202 !important;
+  color: white !important;
+}
+
+.sticky-table-container select[data-value="Warm - no call"] {
+  background-color: #ffb366 !important;
+}
+
+.sticky-table-container select[data-value="Warm - no tour"] {
+  background-color: #ffe5a0 !important;
+}
+
+.sticky-table-container select[data-value="Cold"] {
+  background-color: #bfe1ff !important;
+}
+
+.sticky-table-container select[data-value="Closed-Won"],
+.sticky-table-container select[data-value="Closed-Lost"] {
+  background-color: #e6cff2 !important;
+}
+
+/* Lead Status dropdown colors */
+.sticky-table-container select option[value="Contacted & Communicated"] {
+  background-color: #11734b !important;
+  color: white !important;
+}
+
+.sticky-table-container select option[value="Contacted"] {
+  background-color: #d4edbc !important;
+}
+
+.sticky-table-container select option[value="Tour Scheduled"] {
+  background-color: #ffc8aa !important;
+}
+
+.sticky-table-container select option[value="Proposal Sent"] {
+  background-color: #c6dbe1 !important;
+}
+
+.sticky-table-container select option[value="Closed-Won"] {
+  background-color: #ffe5a0 !important;
+}
+
+.sticky-table-container select option[value="Closed-Lost"] {
+  background-color: #3d3d3d !important;
+  color: white !important;
+}
+
+/* Selected Lead Status dropdown value colors */
+.sticky-table-container select[data-value="Contacted & Communicated"] {
+  background-color: #11734b !important;
+  color: white !important;
+}
+
+.sticky-table-container select[data-value="Contacted"] {
+  background-color: #d4edbc !important;
+}
+
+.sticky-table-container select[data-value="Tour Scheduled"] {
+  background-color: #ffc8aa !important;
+}
+
+.sticky-table-container select[data-value="Proposal Sent"] {
+  background-color: #c6dbe1 !important;
+}
+
+.sticky-table-container select[data-value="Closed-Won"] {
+  background-color: #ffe5a0 !important;
+}
+
+.sticky-table-container select[data-value="Closed-Lost"] {
+  background-color: #3d3d3d !important;
+  color: white !important;
+}
+
+/* Profile Modal Dropdown Colors - Lead Stage */
+.profile-modal select option[value="Hot"] {
+  background-color: #ffcfc9 !important;
+}
+
+.profile-modal select option[value="Hot - manual reply"] {
+  background-color: #B10202 !important;
+  color: white !important;
+}
+
+.profile-modal select option[value="Warm - no call"] {
+  background-color: #ffb366 !important;
+}
+
+.profile-modal select option[value="Warm - no tour"] {
+  background-color: #ffe5a0 !important;
+}
+
+.profile-modal select option[value="Cold"] {
+  background-color: #bfe1ff !important;
+}
+
+.profile-modal select option[value="Closed-Won"],
+.profile-modal select option[value="Closed-Lost"] {
+  background-color: #e6cff2 !important;
+}
+
+/* Profile Modal Selected Lead Stage Colors */
+.profile-modal select[data-value="Hot"] {
+  background-color: #ffcfc9 !important;
+}
+
+.profile-modal select[data-value="Hot - manual reply"] {
+  background-color: #B10202 !important;
+  color: white !important;
+}
+
+.profile-modal select[data-value="Warm - no call"] {
+  background-color: #ffb366 !important;
+}
+
+.profile-modal select[data-value="Warm - no tour"] {
+  background-color: #ffe5a0 !important;
+}
+
+.profile-modal select[data-value="Cold"] {
+  background-color: #bfe1ff !important;
+}
+
+.profile-modal select[data-value="Closed-Won"],
+.profile-modal select[data-value="Closed-Lost"] {
+  background-color: #e6cff2 !important;
+}
+
+/* Profile Modal Lead Status dropdown colors */
+.profile-modal select option[value="Contacted & Communicated"] {
+  background-color: #11734b !important;
+  color: white !important;
+}
+
+.profile-modal select option[value="Contacted"] {
+  background-color: #d4edbc !important;
+}
+
+.profile-modal select option[value="Tour Scheduled"] {
+  background-color: #ffc8aa !important;
+}
+
+.profile-modal select option[value="Proposal Sent"] {
+  background-color: #c6dbe1 !important;
+}
+
+.profile-modal select option[value="Closed-Won"] {
+  background-color: #ffe5a0 !important;
+}
+
+.profile-modal select option[value="Closed-Lost"] {
+  background-color: #3d3d3d !important;
+  color: white !important;
+}
+
+/* Profile Modal Selected Lead Status Colors */
+.profile-modal select[data-value="Contacted & Communicated"] {
+  background-color: #11734b !important;
+  color: white !important;
+}
+
+.profile-modal select[data-value="Contacted"] {
+  background-color: #d4edbc !important;
+}
+
+.profile-modal select[data-value="Tour Scheduled"] {
+  background-color: #ffc8aa !important;
+}
+
+.profile-modal select[data-value="Proposal Sent"] {
+  background-color: #c6dbe1 !important;
+}
+
+.profile-modal select[data-value="Closed-Won"] {
+  background-color: #ffe5a0 !important;
+}
+
+.profile-modal select[data-value="Closed-Lost"] {
+  background-color: #3d3d3d !important;
+  color: white !important;
+}

@@ -86,11 +86,14 @@ h1, h2, h3, h4, h5, h6 {
 .sticky-table-container {
   overflow: scroll !important;
   scrollbar-gutter: stable;
+  /* Force scrollbar visibility for Chrome on Chromebox */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Ensure horizontal scrollbar is always visible */
 .sticky-table-container::-webkit-scrollbar:horizontal {
   height: 24px !important;
+  background: #f0f0f0 !important;
 }
 
 /* Make sure the scrollbar track is always visible */
@@ -99,6 +102,48 @@ h1, h2, h3, h4, h5, h6 {
   border: 3px solid #d1d1d1 !important;
   border-radius: 12px !important;
   margin: 4px !important;
+  min-height: 24px !important;
+}
+
+/* Force scrollbar thumb to always be visible */
+.sticky-table-container::-webkit-scrollbar-thumb:horizontal {
+  background: #3e2f1c !important;
+  border: 3px solid #2a1f12 !important;
+  border-radius: 12px !important;
+  min-height: 32px !important;
+  min-width: 50px !important;
+}
+
+/* Additional Chrome-specific overrides for Chromebox */
+.sticky-table-container::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+/* Force the scrollbar to show even when content doesn't overflow */
+.sticky-table-container {
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  padding-bottom: 24px !important; /* Add padding to ensure scrollbar space */
+}
+
+/* Ensure scrollbar is visible on all Chrome versions */
+.sticky-table-container::-webkit-scrollbar-track {
+  -webkit-appearance: none;
+  background: #f0f0f0 !important;
+  border: 3px solid #d1d1d1 !important;
+  border-radius: 12px !important;
+  margin: 4px !important;
+}
+
+.sticky-table-container::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
+  background: #3e2f1c !important;
+  border: 3px solid #2a1f12 !important;
+  border-radius: 12px !important;
+  min-height: 32px !important;
+  min-width: 32px !important;
 }
 
 .sticky-table-container table {

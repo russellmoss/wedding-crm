@@ -222,6 +222,43 @@ const CRMDashboard = () => {
     applyFilters();
   }, [filters, sheetData.data]);
 
+  // Force scrollbar visibility for Chromebox Chrome
+  useEffect(() => {
+    const forceScrollbarVisibility = () => {
+      const tableContainer = document.querySelector('.sticky-table-container');
+      if (tableContainer) {
+        // Force horizontal scrollbar to be visible
+        tableContainer.style.overflowX = 'scroll';
+        tableContainer.style.overflowY = 'auto';
+        
+        // Add padding to ensure scrollbar space
+        tableContainer.style.paddingBottom = '24px';
+        
+        // Force scrollbar to show by temporarily making content wider
+        const table = tableContainer.querySelector('table');
+        if (table) {
+          const currentWidth = table.scrollWidth;
+          table.style.minWidth = `${currentWidth + 50}px`;
+          
+          // Reset after a short delay
+          setTimeout(() => {
+            table.style.minWidth = '';
+          }, 100);
+        }
+      }
+    };
+
+    // Run on mount and when data changes
+    forceScrollbarVisibility();
+    
+    // Also run when window resizes
+    window.addEventListener('resize', forceScrollbarVisibility);
+    
+    return () => {
+      window.removeEventListener('resize', forceScrollbarVisibility);
+    };
+  }, [sheetData.data]);
+
   // Fetch data from Google Sheets API using local proxy
   const fetchData = async (showIndicator = false) => {
     try {

@@ -300,26 +300,26 @@ const CRMDashboard = () => {
     }
   };
 
-  // Update a cell in the sheet using local proxy
+  // Update a cell in the sheet using GET request with URL parameters
   const updateCell = async (rowIndex, columnIndex, value) => {
     try {
       console.log('Sending update request to:', API_BASE_URL);
-      const response = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'updateRow',
-          rowIndex: rowIndex,
-          updates: { [columnIndex]: value }
-        })
+      
+      // Create URL parameters for the update
+      const params = new URLSearchParams({
+        type: 'update',
+        action: 'updateRow',
+        rowIndex: rowIndex.toString(),
+        columnIndex: columnIndex.toString(),
+        value: value
       });
       
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      const url = `${API_BASE_URL}?${params.toString()}`;
+      console.log('Update URL:', url);
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -349,17 +349,17 @@ const CRMDashboard = () => {
     }
   };
 
-  // Trigger lead update (column O button) using proxy method
+  // Trigger lead update (column O button) using GET request
   const triggerLeadUpdate = async (rowIndex) => {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'triggerLeadUpdate',
-          rowIndex: rowIndex
-        })
+      const params = new URLSearchParams({
+        type: 'update',
+        action: 'triggerLeadUpdate',
+        rowIndex: rowIndex.toString()
       });
+      
+      const url = `${API_BASE_URL}?${params.toString()}`;
+      const response = await fetch(url);
       
       const result = await response.json();
       if (result.success) {
@@ -373,17 +373,17 @@ const CRMDashboard = () => {
     }
   };
 
-  // Dismiss an alert using proxy method
+  // Dismiss an alert using GET request
   const dismissAlert = async (alertId) => {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'dismissAlert',
-          alertId: alertId
-        })
+      const params = new URLSearchParams({
+        type: 'update',
+        action: 'dismissAlert',
+        alertId: alertId
       });
+      
+      const url = `${API_BASE_URL}?${params.toString()}`;
+      const response = await fetch(url);
       
       const result = await response.json();
       if (result.success) {
@@ -400,14 +400,14 @@ const CRMDashboard = () => {
   // Open call form with pre-filled data
   const openCallForm = async (rowIndex) => {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'openCallForm',
-          rowIndex: rowIndex
-        })
+      const params = new URLSearchParams({
+        type: 'update',
+        action: 'openCallForm',
+        rowIndex: rowIndex.toString()
       });
+      
+      const url = `${API_BASE_URL}?${params.toString()}`;
+      const response = await fetch(url);
       
       const result = await response.json();
       if (result.success) {

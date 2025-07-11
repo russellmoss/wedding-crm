@@ -40,6 +40,42 @@ h1, h2, h3, h4, h5, h6 {
   max-height: 70vh;
 }
 
+/* Prominent scrollbar styles for better usability on Chromebox */
+.sticky-table-container::-webkit-scrollbar {
+  width: 16px;  /* Wider scrollbar */
+  height: 16px; /* Taller horizontal scrollbar */
+}
+
+.sticky-table-container::-webkit-scrollbar-track {
+  background: #e5e5e5;
+  border-radius: 8px;
+  border: 2px solid #d1d1d1;
+}
+
+.sticky-table-container::-webkit-scrollbar-thumb {
+  background: #3e2f1c;
+  border-radius: 8px;
+  border: 2px solid #2a1f12;
+  min-height: 20px; /* Minimum height for horizontal scrollbar */
+  min-width: 20px;  /* Minimum width for vertical scrollbar */
+}
+
+.sticky-table-container::-webkit-scrollbar-thumb:hover {
+  background: #2a1f12;
+  border-color: #1a150d;
+}
+
+.sticky-table-container::-webkit-scrollbar-corner {
+  background: #e5e5e5;
+  border-radius: 8px;
+}
+
+/* Firefox scrollbar styles */
+.sticky-table-container {
+  scrollbar-width: auto;
+  scrollbar-color: #3e2f1c #e5e5e5;
+}
+
 .sticky-table-container table {
   border-collapse: separate;
   border-spacing: 0;

@@ -811,11 +811,11 @@ const CRMDashboard = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Alert Bell */}
-            <div className="relative dropdown-container">
+            {/* Sticky Alert Bell */}
+            <div className="fixed top-4 right-16 z-50 dropdown-container">
               <button
                 onClick={() => setShowAlerts(!showAlerts)}
-                className="relative p-2 rounded-full hover:bg-[#f5f1e3] transition-colors"
+                className="relative p-3 rounded-full bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors"
               >
                 <Bell className="w-6 h-6" />
                 {alertCount > 0 && (

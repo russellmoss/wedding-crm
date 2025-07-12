@@ -269,30 +269,28 @@ const CRMDashboard = () => {
     let startY = 0;
     let scrollLeft = 0;
     let scrollTop = 0;
+    let dragStartTime = 0;
 
     const handleMouseDown = (e) => {
-      // Only activate on left mouse button and not on interactive elements
-      if (e.button !== 0 || e.target.closest('select, button, input, a, td, th')) return;
+      // Only activate on left mouse button
+      if (e.button !== 0) return;
       
-      // Add a small delay to distinguish between click and drag
-      const dragTimeout = setTimeout(() => {
-        isDragging = true;
-        startX = e.pageX - tableContainer.offsetLeft;
-        startY = e.pageY - tableContainer.offsetTop;
-        scrollLeft = tableContainer.scrollLeft;
-        scrollTop = tableContainer.scrollTop;
-        
-        // Change cursor to indicate dragging
-        tableContainer.style.cursor = 'grabbing';
-        tableContainer.style.userSelect = 'none';
-        tableContainer.classList.add('dragging');
-        
-        // Prevent text selection
-        e.preventDefault();
-      }, 150); // 150ms delay to distinguish from clicks
+      // Don't start drag on interactive elements
+      if (e.target.closest('select, button, input, a')) return;
       
-      // Store timeout to clear if mouse up happens quickly
-      tableContainer.dragTimeout = dragTimeout;
+      dragStartTime = Date.now();
+      isDragging = true;
+      startX = e.pageX - tableContainer.offsetLeft;
+      startY = e.pageY - tableContainer.offsetTop;
+      scrollLeft = tableContainer.scrollLeft;
+      scrollTop = tableContainer.scrollTop;
+      
+      // Change cursor to indicate dragging
+      tableContainer.style.cursor = 'grabbing';
+      tableContainer.style.userSelect = 'none';
+      
+      // Prevent text selection
+      e.preventDefault();
     };
 
     const handleMouseMove = (e) => {
@@ -301,24 +299,32 @@ const CRMDashboard = () => {
       e.preventDefault();
       const x = e.pageX - tableContainer.offsetLeft;
       const y = e.pageY - tableContainer.offsetTop;
-      const walkX = (x - startX) * 1.5; // Scroll speed multiplier
-      const walkY = (y - startY) * 1.5;
+      const walkX = (x - startX) * 2; // Increased scroll speed
+      const walkY = (y - startY) * 2;
       
+      // Scroll immediately without threshold
       tableContainer.scrollLeft = scrollLeft - walkX;
       tableContainer.scrollTop = scrollTop - walkY;
     };
 
-    const handleMouseUp = () => {
-      // Clear the drag timeout if it exists
-      if (tableContainer.dragTimeout) {
-        clearTimeout(tableContainer.dragTimeout);
-        tableContainer.dragTimeout = null;
-      }
+    const handleMouseUp = (e) => {
+      if (!isDragging) return;
       
-      isDragging = false;
-      tableContainer.style.cursor = 'grab';
-      tableContainer.style.userSelect = 'auto';
-      tableContainer.classList.remove('dragging');
+      const dragDuration = Date.now() - dragStartTime;
+      
+      // If it was a quick click (less than 200ms), don't prevent the click
+      if (dragDuration < 200) {
+        // Allow the click to proceed for profile opening
+        setTimeout(() => {
+          isDragging = false;
+          tableContainer.style.cursor = 'grab';
+          tableContainer.style.userSelect = 'auto';
+        }, 10);
+      } else {
+        isDragging = false;
+        tableContainer.style.cursor = 'grab';
+        tableContainer.style.userSelect = 'auto';
+      }
     };
 
     const handleMouseLeave = () => {
@@ -326,13 +332,6 @@ const CRMDashboard = () => {
         isDragging = false;
         tableContainer.style.cursor = 'grab';
         tableContainer.style.userSelect = 'auto';
-        tableContainer.classList.remove('dragging');
-      }
-      
-      // Clear any pending drag timeout
-      if (tableContainer.dragTimeout) {
-        clearTimeout(tableContainer.dragTimeout);
-        tableContainer.dragTimeout = null;
       }
     };
 
@@ -353,83 +352,88 @@ const CRMDashboard = () => {
     };
   }, [sheetData.data]);
 
-  // Add custom scrollbar indicator for Asus Chromebox
+  // Add simple horizontal scroll controls for Asus Chromebox
   useEffect(() => {
     const tableContainer = document.querySelector('.sticky-table-container');
     if (!tableContainer) return;
 
-    // Create custom scrollbar indicator
-    const createScrollbarIndicator = () => {
-      // Remove existing indicator if any
-      const existingIndicator = document.getElementById('custom-scrollbar-indicator');
-      if (existingIndicator) {
-        existingIndicator.remove();
+    // Create simple scroll controls
+    const createScrollControls = () => {
+      // Remove existing controls if any
+      const existingControls = document.getElementById('scroll-controls');
+      if (existingControls) {
+        existingControls.remove();
       }
 
-      // Create new indicator
-      const indicator = document.createElement('div');
-      indicator.id = 'custom-scrollbar-indicator';
-      indicator.style.cssText = `
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 8px;
-        background: #3e2f1c;
-        border-radius: 4px;
-        margin: 0 4px 4px 4px;
+      // Create controls container
+      const controls = document.createElement('div');
+      controls.id = 'scroll-controls';
+      controls.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
         z-index: 1000;
-        cursor: pointer;
-        opacity: 0.8;
-        transition: opacity 0.2s;
       `;
 
-      // Add hover effect
-      indicator.addEventListener('mouseenter', () => {
-        indicator.style.opacity = '1';
-        indicator.style.height = '12px';
+      // Create left scroll button
+      const leftBtn = document.createElement('button');
+      leftBtn.innerHTML = '←';
+      leftBtn.style.cssText = `
+        width: 50px;
+        height: 50px;
+        background: #3e2f1c;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 20px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        transition: all 0.2s;
+      `;
+
+      // Create right scroll button
+      const rightBtn = document.createElement('button');
+      rightBtn.innerHTML = '→';
+      rightBtn.style.cssText = leftBtn.style.cssText;
+
+      // Add hover effects
+      [leftBtn, rightBtn].forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+          btn.style.background = '#2a1f12';
+          btn.style.transform = 'scale(1.1)';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.background = '#3e2f1c';
+          btn.style.transform = 'scale(1)';
+        });
       });
 
-      indicator.addEventListener('mouseleave', () => {
-        indicator.style.opacity = '0.8';
-        indicator.style.height = '8px';
+      // Add click functionality
+      leftBtn.addEventListener('click', () => {
+        tableContainer.scrollLeft -= 300;
       });
 
-      // Add click functionality to scroll
-      indicator.addEventListener('click', (e) => {
-        const rect = indicator.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percentage = clickX / rect.width;
-        const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
-        tableContainer.scrollLeft = maxScroll * percentage;
+      rightBtn.addEventListener('click', () => {
+        tableContainer.scrollLeft += 300;
       });
 
-      // Add to container
-      tableContainer.style.position = 'relative';
-      tableContainer.appendChild(indicator);
+      // Add controls to page
+      controls.appendChild(leftBtn);
+      controls.appendChild(rightBtn);
+      document.body.appendChild(controls);
     };
 
-    // Create indicator after a short delay to ensure table is rendered
-    setTimeout(createScrollbarIndicator, 500);
-
-    // Update indicator on scroll
-    const updateIndicator = () => {
-      const indicator = document.getElementById('custom-scrollbar-indicator');
-      if (indicator && tableContainer) {
-        const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
-        const scrollPercentage = maxScroll > 0 ? tableContainer.scrollLeft / maxScroll : 0;
-        indicator.style.transform = `translateX(${scrollPercentage * 100}%)`;
-      }
-    };
-
-    tableContainer.addEventListener('scroll', updateIndicator);
+    // Create controls after a short delay
+    setTimeout(createScrollControls, 500);
 
     return () => {
-      const indicator = document.getElementById('custom-scrollbar-indicator');
-      if (indicator) {
-        indicator.remove();
+      const controls = document.getElementById('scroll-controls');
+      if (controls) {
+        controls.remove();
       }
-      tableContainer.removeEventListener('scroll', updateIndicator);
     };
   }, [sheetData.data]);
 

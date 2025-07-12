@@ -272,20 +272,27 @@ const CRMDashboard = () => {
 
     const handleMouseDown = (e) => {
       // Only activate on left mouse button and not on interactive elements
-      if (e.button !== 0 || e.target.closest('select, button, input, a')) return;
+      if (e.button !== 0 || e.target.closest('select, button, input, a, td, th')) return;
       
-      isDragging = true;
-      startX = e.pageX - tableContainer.offsetLeft;
-      startY = e.pageY - tableContainer.offsetTop;
-      scrollLeft = tableContainer.scrollLeft;
-      scrollTop = tableContainer.scrollTop;
+      // Add a small delay to distinguish between click and drag
+      const dragTimeout = setTimeout(() => {
+        isDragging = true;
+        startX = e.pageX - tableContainer.offsetLeft;
+        startY = e.pageY - tableContainer.offsetTop;
+        scrollLeft = tableContainer.scrollLeft;
+        scrollTop = tableContainer.scrollTop;
+        
+        // Change cursor to indicate dragging
+        tableContainer.style.cursor = 'grabbing';
+        tableContainer.style.userSelect = 'none';
+        tableContainer.classList.add('dragging');
+        
+        // Prevent text selection
+        e.preventDefault();
+      }, 150); // 150ms delay to distinguish from clicks
       
-      // Change cursor to indicate dragging
-      tableContainer.style.cursor = 'grabbing';
-      tableContainer.style.userSelect = 'none';
-      
-      // Prevent text selection
-      e.preventDefault();
+      // Store timeout to clear if mouse up happens quickly
+      tableContainer.dragTimeout = dragTimeout;
     };
 
     const handleMouseMove = (e) => {
@@ -302,9 +309,16 @@ const CRMDashboard = () => {
     };
 
     const handleMouseUp = () => {
+      // Clear the drag timeout if it exists
+      if (tableContainer.dragTimeout) {
+        clearTimeout(tableContainer.dragTimeout);
+        tableContainer.dragTimeout = null;
+      }
+      
       isDragging = false;
       tableContainer.style.cursor = 'grab';
       tableContainer.style.userSelect = 'auto';
+      tableContainer.classList.remove('dragging');
     };
 
     const handleMouseLeave = () => {
@@ -312,6 +326,13 @@ const CRMDashboard = () => {
         isDragging = false;
         tableContainer.style.cursor = 'grab';
         tableContainer.style.userSelect = 'auto';
+        tableContainer.classList.remove('dragging');
+      }
+      
+      // Clear any pending drag timeout
+      if (tableContainer.dragTimeout) {
+        clearTimeout(tableContainer.dragTimeout);
+        tableContainer.dragTimeout = null;
       }
     };
 
@@ -329,6 +350,86 @@ const CRMDashboard = () => {
       tableContainer.removeEventListener('mousemove', handleMouseMove);
       tableContainer.removeEventListener('mouseup', handleMouseUp);
       tableContainer.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [sheetData.data]);
+
+  // Add custom scrollbar indicator for Asus Chromebox
+  useEffect(() => {
+    const tableContainer = document.querySelector('.sticky-table-container');
+    if (!tableContainer) return;
+
+    // Create custom scrollbar indicator
+    const createScrollbarIndicator = () => {
+      // Remove existing indicator if any
+      const existingIndicator = document.getElementById('custom-scrollbar-indicator');
+      if (existingIndicator) {
+        existingIndicator.remove();
+      }
+
+      // Create new indicator
+      const indicator = document.createElement('div');
+      indicator.id = 'custom-scrollbar-indicator';
+      indicator.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: #3e2f1c;
+        border-radius: 4px;
+        margin: 0 4px 4px 4px;
+        z-index: 1000;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+      `;
+
+      // Add hover effect
+      indicator.addEventListener('mouseenter', () => {
+        indicator.style.opacity = '1';
+        indicator.style.height = '12px';
+      });
+
+      indicator.addEventListener('mouseleave', () => {
+        indicator.style.opacity = '0.8';
+        indicator.style.height = '8px';
+      });
+
+      // Add click functionality to scroll
+      indicator.addEventListener('click', (e) => {
+        const rect = indicator.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percentage = clickX / rect.width;
+        const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
+        tableContainer.scrollLeft = maxScroll * percentage;
+      });
+
+      // Add to container
+      tableContainer.style.position = 'relative';
+      tableContainer.appendChild(indicator);
+    };
+
+    // Create indicator after a short delay to ensure table is rendered
+    setTimeout(createScrollbarIndicator, 500);
+
+    // Update indicator on scroll
+    const updateIndicator = () => {
+      const indicator = document.getElementById('custom-scrollbar-indicator');
+      if (indicator && tableContainer) {
+        const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
+        const scrollPercentage = maxScroll > 0 ? tableContainer.scrollLeft / maxScroll : 0;
+        indicator.style.transform = `translateX(${scrollPercentage * 100}%)`;
+      }
+    };
+
+    tableContainer.addEventListener('scroll', updateIndicator);
+
+    return () => {
+      const indicator = document.getElementById('custom-scrollbar-indicator');
+      if (indicator) {
+        indicator.remove();
+      }
+      tableContainer.removeEventListener('scroll', updateIndicator);
     };
   }, [sheetData.data]);
 

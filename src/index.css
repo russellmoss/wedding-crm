@@ -91,6 +91,24 @@ h1, h2, h3, h4, h5, h6 {
   /* Enhanced drag scrolling */
   cursor: grab;
   scroll-behavior: smooth;
+  /* Aggressive scrollbar forcing for Asus Chromebox */
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  padding-bottom: 30px !important;
+  padding-right: 30px !important;
+}
+
+/* Force horizontal scrollbar to be visible on Asus Chromebox */
+.sticky-table-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(to bottom, transparent, #f0f0f0);
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* Cursor states for drag scrolling */

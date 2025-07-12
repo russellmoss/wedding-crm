@@ -1,6 +1,6 @@
 // src/components/CRMDashboard.jsx (Updated with authentication)
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Phone, Mail, Calendar, User, AlertTriangle, Clock, Flame, LogOut, Settings, Search } from 'lucide-react';
+import { Bell, X, Phone, Mail, Calendar, User, AlertTriangle, Clock, Flame, LogOut, Settings, Search, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 // Configuration - Use environment variables for different environments
@@ -23,6 +23,122 @@ const CRMDashboard = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [newDataIndicator, setNewDataIndicator] = useState(false);
+  const [kioskMode, setKioskMode] = useState(false);
+  const [tableHeight, setTableHeight] = useState('calc(100vh - 60px)');
+  
+  // Fullscreen functionality
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  // Handle fullscreen changes and keyboard shortcuts
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && kioskMode) {
+        setKioskMode(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && kioskMode) {
+        setKioskMode(false);
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+      }
+    };
+
+          // Add CSS to remove body/html margins in kiosk mode
+      if (kioskMode) {
+        const style = document.createElement('style');
+        style.id = 'kiosk-mode-styles';
+        style.textContent = `
+          body, html {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+          }
+          *::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+          }
+          * {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+          }
+          .sticky-table-container {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      } else {
+      const existingStyle = document.getElementById('kiosk-mode-styles');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('keydown', handleKeyDown);
+      
+      // Clean up styles when component unmounts
+      const existingStyle = document.getElementById('kiosk-mode-styles');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, [kioskMode]);
+
+  // Toggle kiosk mode with fullscreen
+  const toggleKioskMode = () => {
+    if (!kioskMode) {
+      setKioskMode(true);
+      toggleFullscreen();
+      setTableHeight('100%'); // Reset table height when entering kiosk mode
+    } else {
+      setKioskMode(false);
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  // Handle table height dragging
+  const handleTableResize = (e) => {
+    if (!kioskMode) return;
+    
+    e.preventDefault();
+    const startY = e.clientY;
+    const currentHeight = parseInt(tableHeight.match(/calc\(100vh - (\d+)px\)/)?.[1] || '60');
+    
+    const handleMouseMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      const deltaY = startY - moveEvent.clientY; // Inverted for intuitive dragging
+      const newOffset = Math.max(0, currentHeight - deltaY);
+      setTableHeight(`calc(100vh - ${newOffset}px)`);
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseUp', handleMouseUp);
+  };
   
   // Search functionality
   const [searchQuery, setSearchQuery] = useState('');
@@ -370,28 +486,31 @@ const CRMDashboard = () => {
       controls.id = 'scroll-controls';
       controls.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        bottom: ${kioskMode ? '5px' : '10px'};
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 10px;
+        gap: ${kioskMode ? '3px' : '5px'};
         z-index: 1000;
+        background: transparent;
+        pointer-events: none;
       `;
 
       // Create left scroll button
       const leftBtn = document.createElement('button');
       leftBtn.innerHTML = '←';
       leftBtn.style.cssText = `
-        width: 50px;
-        height: 50px;
+        width: ${kioskMode ? '25px' : '30px'};
+        height: ${kioskMode ? '25px' : '30px'};
         background: #3e2f1c;
         color: white;
         border: none;
-        border-radius: 25px;
-        font-size: 20px;
+        border-radius: ${kioskMode ? '12px' : '15px'};
+        font-size: ${kioskMode ? '12px' : '14px'};
         cursor: pointer;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         transition: all 0.2s;
+        pointer-events: auto;
       `;
 
       // Create right scroll button
@@ -423,7 +542,13 @@ const CRMDashboard = () => {
       // Add controls to page
       controls.appendChild(leftBtn);
       controls.appendChild(rightBtn);
-      document.body.appendChild(controls);
+      // Append to the main container instead of body to avoid layout issues
+      const mainContainer = document.querySelector('.min-h-screen, .h-screen');
+      if (mainContainer) {
+        mainContainer.appendChild(controls);
+      } else {
+        document.body.appendChild(controls);
+      }
     };
 
     // Create controls after a short delay
@@ -796,23 +921,36 @@ const CRMDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f1e3] text-[#3e2f1c]" style={{ fontFamily: 'Avenir, sans-serif' }}>
+    <div 
+      className={`${kioskMode ? 'h-screen flex flex-col' : 'min-h-screen'} bg-[#f5f1e3] text-[#3e2f1c]`} 
+      style={{ 
+        fontFamily: 'Avenir, sans-serif',
+        ...(kioskMode && { 
+          margin: 0, 
+          padding: 0,
+          height: '100vh',
+          overflow: 'hidden'
+        })
+      }}
+    >
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-[#3e2f1c]/20 p-4">
+      <header className={`bg-white shadow-sm border-b border-[#3e2f1c]/20 ${kioskMode ? 'p-2' : 'p-4'}`}>
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold" style={{ fontFamily: 'Cochin, serif' }}>
-              Milea Estate Vineyard - CRM Dashboard
+            <h1 className={`font-bold ${kioskMode ? 'text-lg' : 'text-3xl'}`} style={{ fontFamily: 'Cochin, serif' }}>
+              {kioskMode ? 'Milea Estate CRM - KIOSK MODE' : 'Milea Estate Vineyard - CRM Dashboard'}
             </h1>
-            <p className="text-sm text-[#3e2f1c]/70 mt-1">
-              Welcome back, {user?.email}
-            </p>
+            {!kioskMode && (
+              <p className="text-sm text-[#3e2f1c]/70 mt-1">
+                Welcome back, {user?.email}
+              </p>
+            )}
             <div className="flex items-center gap-2 mt-1">
               <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-              <span className="text-xs text-[#3e2f1c]/60">
+              <span className={`text-[#3e2f1c]/60 ${kioskMode ? 'text-xs' : 'text-xs'}`}>
                 {isUpdating ? 'Updating...' : 'Live'}
               </span>
-              {lastUpdateTime && (
+              {lastUpdateTime && !kioskMode && (
                 <span className="text-xs text-[#3e2f1c]/40">
                   • Last update: {lastUpdateTime.toLocaleTimeString()}
                 </span>
@@ -821,15 +959,15 @@ const CRMDashboard = () => {
           </div>
           
           {/* Search Bar */}
-          <div className="relative search-container flex-1 max-w-md mx-8">
+          <div className={`relative search-container flex-1 ${kioskMode ? 'max-w-xs mx-4' : 'max-w-md mx-8'}`}>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${kioskMode ? 'w-3 h-3' : 'w-4 h-4'}`} />
               <input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder={kioskMode ? "Search..." : "Search by name or email..."}
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                className={`w-full pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] ${kioskMode ? 'py-1 text-xs' : 'py-2 text-sm'}`}
               />
             </div>
             
@@ -863,8 +1001,18 @@ const CRMDashboard = () => {
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Kiosk Mode Toggle */}
+            <button
+              onClick={toggleKioskMode}
+              className="flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors text-sm"
+              title={kioskMode ? "Exit Fullscreen Kiosk Mode" : "Enter Fullscreen Kiosk Mode"}
+            >
+              {kioskMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {kioskMode ? "Exit Kiosk" : "Full Kiosk"}
+            </button>
+            
             {/* Sticky Alert Bell */}
-            <div className="fixed top-4 right-16 z-50 dropdown-container">
+            <div className={`fixed z-50 dropdown-container ${kioskMode ? 'top-2 right-2' : 'top-4 right-16'}`}>
               <button
                 onClick={() => setShowAlerts(!showAlerts)}
                 className="relative p-3 rounded-full bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors"
@@ -931,37 +1079,39 @@ const CRMDashboard = () => {
               )}
             </div>
 
-            {/* User Menu */}
-            <div className="relative dropdown-container">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-2 rounded-full hover:bg-[#f5f1e3] transition-colors"
-              >
-                <div className="w-8 h-8 bg-[#3e2f1c] rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-              </button>
+            {/* User Menu - Hidden in Kiosk Mode */}
+            {!kioskMode && (
+              <div className="relative dropdown-container">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 p-2 rounded-full hover:bg-[#f5f1e3] transition-colors"
+                >
+                  <div className="w-8 h-8 bg-[#3e2f1c] rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                </button>
 
-              {/* User Dropdown */}
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-[#3e2f1c]/20 rounded-lg shadow-lg z-50">
-                  <div className="p-3 border-b border-[#3e2f1c]/20">
-                    <p className="text-sm font-medium">{user?.email}</p>
-                    <p className="text-xs text-[#3e2f1c]/70">CRM User</p>
+                {/* User Dropdown */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-[#3e2f1c]/20 rounded-lg shadow-lg z-50">
+                    <div className="p-3 border-b border-[#3e2f1c]/20">
+                      <p className="text-sm font-medium">{user?.email}</p>
+                      <p className="text-xs text-[#3e2f1c]/70">CRM User</p>
+                    </div>
+                    
+                    <div className="p-2">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#f5f1e3] rounded-md transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
-                  
-                  <div className="p-2">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#f5f1e3] rounded-md transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -986,32 +1136,33 @@ const CRMDashboard = () => {
       )}
 
       {/* Main Content */}
-      <main className="p-6">
-        {/* Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 p-4 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-[#3e2f1c]" style={{ fontFamily: 'Cochin, serif' }}>
-              Filters
+      <main className={kioskMode ? "p-0 flex flex-col flex-1 overflow-hidden" : "p-6"} style={kioskMode ? { minHeight: 0 } : {}}>
+        {/* Filter Section - Hidden in Kiosk Mode */}
+        {!kioskMode && (
+        <div className={`bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 ${kioskMode ? 'p-2 mb-0' : 'p-4 mb-6'}`}>
+          <div className={`flex justify-between items-center ${kioskMode ? 'mb-2' : 'mb-4'}`}>
+            <h3 className={`font-semibold text-[#3e2f1c] ${kioskMode ? 'text-sm' : 'text-lg'}`} style={{ fontFamily: 'Cochin, serif' }}>
+              {kioskMode ? 'Filters' : 'Filters'}
             </h3>
             <div className="flex items-center gap-2">
-              {activeFilters.length > 0 && (
+              {activeFilters.length > 0 && !kioskMode && (
                 <span className="text-sm text-gray-600">
                   {activeFilters.length} active filter{activeFilters.length !== 1 ? 's' : ''}
                 </span>
               )}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors text-sm"
+                className={`flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors ${kioskMode ? 'text-xs px-2 py-1' : 'text-sm'}`}
               >
-                <Settings className="w-4 h-4" />
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
+                <Settings className={kioskMode ? "w-3 h-3" : "w-4 h-4"} />
+                {kioskMode ? (showFilters ? 'Hide' : 'Show') : (showFilters ? 'Hide Filters' : 'Show Filters')}
               </button>
               {activeFilters.length > 0 && (
                 <button
                   onClick={clearFilters}
-                  className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                  className={`px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors ${kioskMode ? 'text-xs px-2 py-1' : 'text-sm'}`}
                 >
-                  Clear All
+                  {kioskMode ? 'Clear' : 'Clear All'}
                 </button>
               )}
             </div>
@@ -1150,10 +1301,11 @@ const CRMDashboard = () => {
             </div>
           )}
         </div>
+        )}
 
-        <div className="bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 overflow-hidden">
-          <div className="sticky-table-container">
-            <table className="w-full">
+        <div className={`bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 overflow-hidden ${kioskMode ? 'flex-1' : ''}`} style={kioskMode ? { minHeight: 0 } : {}}>
+          <div className={`sticky-table-container ${kioskMode ? 'h-full overflow-hidden' : ''}`}>
+            <table className={`w-full ${kioskMode ? 'h-full' : ''}`}>
               <thead className="sticky top-0 z-30">
                 <tr className="bg-[#3e2f1c] text-white">
                   {(sheetData.headers || []).slice(0, 26).map((header, index) => (
@@ -1228,10 +1380,136 @@ const CRMDashboard = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Kiosk Mode Bottom Controls */}
+          {kioskMode && (
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 p-2 z-50 relative">
+              <div className="flex items-center justify-between gap-4">
+                {/* Compact Search */}
+                <div className="flex-1 max-w-xs">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      className="w-full pl-8 pr-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#3e2f1c]"
+                    />
+                  </div>
+                </div>
+                
+                {/* Compact Filter Toggle */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-1 px-2 py-1 bg-[#3e2f1c] text-white rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors"
+                >
+                  <Settings className="w-3 h-3" />
+                  {showFilters ? 'Hide' : 'Show'} Filters
+                </button>
+                
+                {/* Active Filters Count */}
+                {activeFilters.length > 0 && (
+                  <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                    {activeFilters.length} active
+                  </span>
+                )}
+                
+                {/* Clear Filters */}
+                {activeFilters.length > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              
+              {/* Compact Filter Panel */}
+              {showFilters && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 p-3 bg-gray-50 rounded border shadow-lg">
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <select
+                      value={filters.leadStage}
+                      onChange={(e) => handleFilterChange('leadStage', e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3e2f1c]"
+                    >
+                      <option value="">All Stages</option>
+                      <option value="Hot">Hot</option>
+                      <option value="Hot - manual reply">Hot - manual reply</option>
+                      <option value="Warm - no call">Warm - no call</option>
+                      <option value="Warm - no tour">Warm - no tour</option>
+                      <option value="Cold">Cold</option>
+                      <option value="Closed-Won">Closed-Won</option>
+                      <option value="Closed-Lost">Closed-Lost</option>
+                    </select>
+                    
+                    <select
+                      value={filters.leadStatus1}
+                      onChange={(e) => handleFilterChange('leadStatus1', e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3e2f1c]"
+                    >
+                      <option value="">All Status 1</option>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Contacted & Communicated">Contacted & Communicated</option>
+                      <option value="Tour Scheduled">Tour Scheduled</option>
+                      <option value="Proposal Sent">Proposal Sent</option>
+                      <option value="Closed-Won">Closed-Won</option>
+                      <option value="Closed-Lost">Closed-Lost</option>
+                    </select>
+                    
+                    <select
+                      value={filters.leadStatus2}
+                      onChange={(e) => handleFilterChange('leadStatus2', e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3e2f1c]"
+                    >
+                      <option value="">All Status 2</option>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Contacted & Communicated">Contacted & Communicated</option>
+                      <option value="Tour Scheduled">Tour Scheduled</option>
+                      <option value="Proposal Sent">Proposal Sent</option>
+                      <option value="Closed-Won">Closed-Won</option>
+                      <option value="Closed-Lost">Closed-Lost</option>
+                    </select>
+                    
+                    <select
+                      value={filters.leadStatus3}
+                      onChange={(e) => handleFilterChange('leadStatus3', e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3e2f1c]"
+                    >
+                      <option value="">All Status 3</option>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Contacted & Communicated">Contacted & Communicated</option>
+                      <option value="Tour Scheduled">Tour Scheduled</option>
+                      <option value="Proposal Sent">Proposal Sent</option>
+                      <option value="Closed-Won">Closed-Won</option>
+                      <option value="Closed-Lost">Closed-Lost</option>
+                    </select>
+                    
+                    <select
+                      value={filters.leadStatus4}
+                      onChange={(e) => handleFilterChange('leadStatus4', e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3e2f1c]"
+                    >
+                      <option value="">All Status 4</option>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Contacted & Communicated">Contacted & Communicated</option>
+                      <option value="Tour Scheduled">Tour Scheduled</option>
+                      <option value="Proposal Sent">Proposal Sent</option>
+                      <option value="Closed-Won">Closed-Won</option>
+                      <option value="Closed-Lost">Closed-Lost</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Refresh Button */}
-        <div className="mt-6 flex justify-center items-center gap-4">
+        {/* Refresh Button - Hidden in Kiosk Mode */}
+        {!kioskMode && (
+          <div className="mt-6 flex justify-center items-center gap-4">
           <button
             onClick={() => fetchData(true)}
             disabled={isUpdating}
@@ -1257,6 +1535,7 @@ const CRMDashboard = () => {
             </span>
           )}
         </div>
+        )}
       </main>
 
 

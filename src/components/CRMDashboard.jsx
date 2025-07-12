@@ -1207,24 +1207,7 @@ const CRMDashboard = () => {
         </div>
       </main>
 
-      {/* Instructions */}
-      <div className="p-6 bg-white/50 border-t border-[#3e2f1c]/20 mt-6">
-        <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'Cochin, serif' }}>
-          How to Use:
-        </h3>
-        <ul className="text-sm space-y-1 text-[#3e2f1c]/80">
-          <li>• Use the search bar to quickly find leads by name or email (fuzzy matching)</li>
-          <li>• Click on search results to open the lead's full profile</li>
-          <li>• Use filters to view leads by date range, lead stage, or status</li>
-          <li>• Combine multiple filters to narrow down your results</li>
-          <li>• Use the dropdowns in columns N, P, Q, R, S to update lead status</li>
-          <li>• Click "📞 Update Lead" in column O to trigger lead updates</li>
-          <li>• Check the bell icon for active alerts from your CRM system</li>
-          <li>• Data syncs automatically with your Google Sheet</li>
-          <li>• Alerts refresh every 5 minutes automatically</li>
-          <li>• Click your profile icon to access account settings</li>
-        </ul>
-      </div>
+
 
       {/* Profile Modal */}
       {showProfile && selectedProfile && (

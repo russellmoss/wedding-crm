@@ -685,7 +685,47 @@ const CRMDashboard = () => {
   // Format time for display (for time columns)
   const formatTime = (date) => {
     if (!date) return '';
+    
+    // Handle Google Sheets time format (if it's a string that looks like a time)
+    if (typeof date === 'string' && date.includes('T') && date.includes('Z')) {
+      const d = new Date(date);
+      // Check if it's a valid date (not 1899 which indicates Google Sheets time conversion issue)
+      if (d.getFullYear() === 1899) {
+        // This is likely a Google Sheets time-only value, try to extract just the time part
+        const timeMatch = date.match(/T(\d{2}):(\d{2}):(\d{2})/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1]);
+          const minutes = timeMatch[2];
+          const seconds = timeMatch[3];
+          
+          // Convert from UTC to local time (assuming EST/EDT timezone)
+          // If the time is 23:01:45 UTC, it should be 6:01:45 PM EST (5 hours difference)
+          // The 1899 date indicates this is a Google Sheets time-only value stored as UTC
+          
+          // Convert UTC hours to EST (subtract 5 hours)
+          let localHours = hours - 5;
+          if (localHours < 0) localHours += 24;
+          
+          const ampm = localHours >= 12 ? 'PM' : 'AM';
+          const displayHours = localHours > 12 ? localHours - 12 : localHours === 0 ? 12 : localHours;
+          return `${displayHours}:${minutes}:${seconds} ${ampm}`;
+        }
+      }
+      
+      // For other UTC timestamps, convert to local time
+      return d.toLocaleTimeString('en-US', { 
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'America/New_York' // Force Eastern Time
+      });
+    }
+    
+    // Handle regular date objects
     const d = new Date(date);
+    if (isNaN(d.getTime())) return date; // Return original if invalid date
+    
     return d.toLocaleTimeString('en-US', { 
       hour: 'numeric',
       minute: '2-digit',
@@ -1178,7 +1218,7 @@ const CRMDashboard = () => {
                         ) : (
                           // Regular Display Cells
                           <div className="text-sm">
-                            {colIndex === 0 ? formatDate(cell) : colIndex === 7 ? formatTime(cell) : (cell || '')}
+                            {colIndex === 0 ? formatDate(cell) : colIndex === 1 ? formatTime(cell) : colIndex === 7 ? formatTime(cell) : (cell || '')}
                           </div>
                         )}
                       </td>
@@ -1277,7 +1317,7 @@ const CRMDashboard = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Submission Time</label>
-                      <p className="text-[#3e2f1c] font-medium">{selectedProfile.row.values[1] || 'N/A'}</p>
+                      <p className="text-[#3e2f1c] font-medium">{formatTime(selectedProfile.row.values[1]) || 'N/A'}</p>
                     </div>
                   </div>
                 </div>

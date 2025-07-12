@@ -88,6 +88,27 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-gutter: stable;
   /* Force scrollbar visibility for Chrome on Chromebox */
   -webkit-overflow-scrolling: touch;
+  /* Enhanced drag scrolling */
+  cursor: grab;
+  scroll-behavior: smooth;
+}
+
+/* Cursor states for drag scrolling */
+.sticky-table-container:active {
+  cursor: grabbing !important;
+}
+
+.sticky-table-container.grabbing {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* Prevent text selection during drag */
+.sticky-table-container.dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /* Ensure horizontal scrollbar is always visible */

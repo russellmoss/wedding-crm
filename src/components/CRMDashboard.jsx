@@ -259,6 +259,79 @@ const CRMDashboard = () => {
     };
   }, [sheetData.data]);
 
+  // Add mouse drag scrolling functionality
+  useEffect(() => {
+    const tableContainer = document.querySelector('.sticky-table-container');
+    if (!tableContainer) return;
+
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let scrollLeft = 0;
+    let scrollTop = 0;
+
+    const handleMouseDown = (e) => {
+      // Only activate on left mouse button and not on interactive elements
+      if (e.button !== 0 || e.target.closest('select, button, input, a')) return;
+      
+      isDragging = true;
+      startX = e.pageX - tableContainer.offsetLeft;
+      startY = e.pageY - tableContainer.offsetTop;
+      scrollLeft = tableContainer.scrollLeft;
+      scrollTop = tableContainer.scrollTop;
+      
+      // Change cursor to indicate dragging
+      tableContainer.style.cursor = 'grabbing';
+      tableContainer.style.userSelect = 'none';
+      
+      // Prevent text selection
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      
+      e.preventDefault();
+      const x = e.pageX - tableContainer.offsetLeft;
+      const y = e.pageY - tableContainer.offsetTop;
+      const walkX = (x - startX) * 1.5; // Scroll speed multiplier
+      const walkY = (y - startY) * 1.5;
+      
+      tableContainer.scrollLeft = scrollLeft - walkX;
+      tableContainer.scrollTop = scrollTop - walkY;
+    };
+
+    const handleMouseUp = () => {
+      isDragging = false;
+      tableContainer.style.cursor = 'grab';
+      tableContainer.style.userSelect = 'auto';
+    };
+
+    const handleMouseLeave = () => {
+      if (isDragging) {
+        isDragging = false;
+        tableContainer.style.cursor = 'grab';
+        tableContainer.style.userSelect = 'auto';
+      }
+    };
+
+    // Add event listeners
+    tableContainer.addEventListener('mousedown', handleMouseDown);
+    tableContainer.addEventListener('mousemove', handleMouseMove);
+    tableContainer.addEventListener('mouseup', handleMouseUp);
+    tableContainer.addEventListener('mouseleave', handleMouseLeave);
+    
+    // Set initial cursor style
+    tableContainer.style.cursor = 'grab';
+
+    return () => {
+      tableContainer.removeEventListener('mousedown', handleMouseDown);
+      tableContainer.removeEventListener('mousemove', handleMouseMove);
+      tableContainer.removeEventListener('mouseup', handleMouseUp);
+      tableContainer.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [sheetData.data]);
+
   // Fetch data from Google Sheets API using local proxy
   const fetchData = async (showIndicator = false) => {
     try {

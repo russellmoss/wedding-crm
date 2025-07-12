@@ -682,6 +682,18 @@ const CRMDashboard = () => {
     });
   };
 
+  // Format time for display (for time columns)
+  const formatTime = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleTimeString('en-US', { 
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  };
+
   // Get alert icon based on type
   const getAlertIcon = (type) => {
     switch (type) {
@@ -1166,7 +1178,7 @@ const CRMDashboard = () => {
                         ) : (
                           // Regular Display Cells
                           <div className="text-sm">
-                            {colIndex === 0 || colIndex === 7 ? formatDate(cell) : (cell || '')}
+                            {colIndex === 0 ? formatDate(cell) : colIndex === 7 ? formatTime(cell) : (cell || '')}
                           </div>
                         )}
                       </td>
@@ -1283,7 +1295,7 @@ const CRMDashboard = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Desired Date</label>
-                      <p className="text-[#3e2f1c] font-medium">{formatDate(selectedProfile.row.values[7]) || 'N/A'}</p>
+                                              <p className="text-[#3e2f1c] font-medium">{formatTime(selectedProfile.row.values[7]) || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Guest Count</label>

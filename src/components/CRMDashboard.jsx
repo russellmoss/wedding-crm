@@ -26,6 +26,13 @@ const CRMDashboard = () => {
   const [kioskMode, setKioskMode] = useState(false);
   const [tableHeight, setTableHeight] = useState('calc(100vh - 60px)');
   
+  // Tab functionality
+  const [activeTab, setActiveTab] = useState('All');
+  const [leadStages, setLeadStages] = useState([]);
+  
+  // Sorting functionality
+  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  
   // Fullscreen functionality
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -157,6 +164,74 @@ const CRMDashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
   const [activeFilters, setActiveFilters] = useState([]);
+
+  // Function to truncate text for collapsed fields
+  const truncateText = (text, maxLength = 40) => {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  // State for organized data
+  const [organizedData, setOrganizedData] = useState({});
+
+  // Function to organize data by lead stages
+  const organizeDataByStages = (data) => {
+    const stages = new Set();
+    const organized = { 'All': [] };
+    
+    data.forEach((row, index) => {
+      const leadStage = row.values[13] || 'Uncategorized';
+      stages.add(leadStage);
+      
+      if (!organized[leadStage]) {
+        organized[leadStage] = [];
+      }
+      organized[leadStage].push({ ...row, originalIndex: index });
+      organized['All'].push({ ...row, originalIndex: index });
+    });
+    
+    return { organized, stages: Array.from(stages).sort() };
+  };
+
+  // Organize data when sheetData changes
+  useEffect(() => {
+    if (sheetData.data && sheetData.data.length > 0) {
+      // Debug: Log unique lead stages to see what's coming from the sheet
+      const uniqueStages = new Set();
+      sheetData.data.forEach(row => {
+        const stage = row.values[13];
+        if (stage) {
+          uniqueStages.add(stage);
+          // Log any "Hot" related stages
+          if (stage.toLowerCase().includes('hot')) {
+            console.log('Found Hot stage:', stage);
+          }
+        }
+      });
+      console.log('All unique lead stages:', Array.from(uniqueStages));
+      
+      const { organized, stages } = organizeDataByStages(sheetData.data);
+      setOrganizedData(organized);
+      setLeadStages(['All', ...stages]);
+    }
+  }, [sheetData.data]);
+
+  // Get current tab data
+  const getCurrentTabData = () => {
+    const tabData = organizedData[activeTab] || [];
+    
+    // Sort by submission date (column 0)
+    return tabData.sort((a, b) => {
+      const dateA = new Date(a.values[0] || 0);
+      const dateB = new Date(b.values[0] || 0);
+      
+      if (sortOrder === 'newest') {
+        return dateB - dateA; // Newest first
+      } else {
+        return dateA - dateB; // Oldest first
+      }
+    });
+  };
 
   // Fuzzy search function
   const performSearch = (query) => {
@@ -1218,7 +1293,7 @@ const CRMDashboard = () => {
                 >
                   <option value="">All Stages</option>
                   <option value="Hot">Hot</option>
-                  <option value="Hot - manual reply">Hot - manual reply</option>
+                  <option value="Hot - Manual Reply">Hot - Manual Reply</option>
                   <option value="Warm - no call">Warm - no call</option>
                   <option value="Warm - no tour">Warm - no tour</option>
                   <option value="Cold">Cold</option>
@@ -1304,6 +1379,44 @@ const CRMDashboard = () => {
         )}
 
         <div className={`bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 overflow-hidden ${kioskMode ? 'flex-1' : ''}`} style={kioskMode ? { minHeight: 0 } : {}}>
+          {/* Tab Navigation */}
+          <div className="bg-gray-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex overflow-x-auto tab-navigation">
+                {leadStages.map((stage) => {
+                  const stageData = organizedData[stage] || [];
+                  return (
+                    <button
+                      key={stage}
+                      onClick={() => setActiveTab(stage)}
+                      className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                        activeTab === stage
+                          ? 'border-[#3e2f1c] text-[#3e2f1c] bg-white'
+                          : 'border-transparent text-gray-600 hover:text-[#3e2f1c] hover:bg-gray-100'
+                      }`}
+                    >
+                      {stage} ({stageData.length})
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Sort Toggle Button */}
+              <div className="flex items-center gap-2 px-4 py-2">
+                <span className="text-xs text-gray-600 font-medium">Sort:</span>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
+                  className="flex items-center gap-1 px-3 py-1 bg-[#3e2f1c] text-white rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors"
+                  title={`Currently showing ${sortOrder === 'newest' ? 'newest first' : 'oldest first'}. Click to toggle.`}
+                >
+                  <Calendar className="w-3 h-3" />
+                  {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Content */}
           <div className={`sticky-table-container ${kioskMode ? 'h-full overflow-hidden' : ''}`}>
             <table className={`w-full ${kioskMode ? 'h-full' : ''}`}>
               <thead className="sticky top-0 z-30">
@@ -1311,7 +1424,7 @@ const CRMDashboard = () => {
                   {(sheetData.headers || []).slice(0, 26).map((header, index) => (
                     <th 
                       key={index} 
-                      className="p-3 text-left text-sm font-medium border-r border-white/20 last:border-r-0"
+                      className="p-2 text-left text-sm font-medium border-r border-white/20 last:border-r-0"
                     >
                       {header || `Column ${String.fromCharCode(65 + index)}`}
                     </th>
@@ -1319,25 +1432,25 @@ const CRMDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {(filteredData.length > 0 ? filteredData : (sheetData.data || [])).map((row, rowIndex) => (
+                {getCurrentTabData().map((row, rowIndex) => (
                   <tr 
                     key={rowIndex} 
                     className="border-b border-gray-200 hover:bg-[#f5f1e3]/50 cursor-pointer"
-                    onClick={() => handleRowClick(row, rowIndex)}
+                    onClick={() => handleRowClick(row, row.originalIndex)}
                   >
                     {(row.values || []).slice(0, 26).map((cell, colIndex) => (
                       <td 
                         key={colIndex} 
-                        className="p-3 border-r border-gray-200 last:border-r-0"
+                        className="p-2 border-r border-gray-200 last:border-r-0"
                       >
                         {colIndex === columnDefs.updateColumn ? (
                           // Update Lead Button (Column O)
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              triggerLeadUpdate(rowIndex);
+                              triggerLeadUpdate(row.originalIndex);
                             }}
-                            className="bg-[#3e2f1c] text-white px-3 py-1 rounded text-sm hover:bg-[#3e2f1c]/80 transition-colors"
+                            className="bg-[#3e2f1c] text-white px-2 py-1 rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors"
                           >
                             📞 Update Lead
                           </button>
@@ -1346,31 +1459,40 @@ const CRMDashboard = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              openCallForm(rowIndex);
+                              openCallForm(row.originalIndex);
                             }}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors"
                           >
                             📞 Start Call Form
                           </button>
                         ) : columnDefs.editableColumns[colIndex] ? (
                           // Editable Dropdown Columns (N, P, Q, R, S)
                           <select
-                            value={cell || ''}
-                            data-value={cell || ''}
-                            onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
+                            value={cell === "Hot - manual reply" ? "Hot - Manual Reply" : (cell || '')}
+                            data-value={cell === "Hot - manual reply" ? "Hot - Manual Reply" : (cell || '')}
+                            onChange={(e) => updateCell(row.originalIndex, colIndex, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full p-2 border border-gray-300 rounded text-sm bg-white min-w-[180px] focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c]"
+                            className="w-full p-1 border border-gray-300 rounded text-xs bg-white min-w-[120px] focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c]"
                           >
-                            {columnDefs.editableColumns[colIndex].options.map((option, optIndex) => (
-                              <option key={optIndex} value={option}>
-                                {option}
-                              </option>
-                            ))}
+                            {columnDefs.editableColumns[colIndex].options.map((option, optIndex) => {
+                              // Fix the case for "Hot - manual reply" to match Google Sheet
+                              const displayOption = option === "Hot - manual reply" ? "Hot - Manual Reply" : option;
+                              return (
+                                <option key={optIndex} value={displayOption}>
+                                  {displayOption}
+                                </option>
+                              );
+                            })}
                           </select>
                         ) : (
-                          // Regular Display Cells
-                          <div className="text-sm">
-                            {colIndex === 0 ? formatDate(cell) : colIndex === 1 ? formatTime(cell) : colIndex === 7 ? formatDate(cell) : (cell || '')}
+                          // Regular Display Cells with collapsed messages and notes
+                          <div className="text-xs">
+                            {colIndex === 0 ? formatDate(cell) : 
+                             colIndex === 1 ? formatTime(cell) : 
+                             colIndex === 7 ? formatDate(cell) : 
+                             colIndex === 9 ? truncateText(cell, 40) : // Message field - collapsed
+                             colIndex === 19 ? truncateText(cell, 40) : // Notes field - collapsed
+                             (cell || '')}
                           </div>
                         )}
                       </td>
@@ -1437,7 +1559,7 @@ const CRMDashboard = () => {
                     >
                       <option value="">All Stages</option>
                       <option value="Hot">Hot</option>
-                      <option value="Hot - manual reply">Hot - manual reply</option>
+                      <option value="Hot - Manual Reply">Hot - Manual Reply</option>
                       <option value="Warm - no call">Warm - no call</option>
                       <option value="Warm - no tour">Warm - no tour</option>
                       <option value="Cold">Cold</option>
@@ -1646,8 +1768,8 @@ const CRMDashboard = () => {
                       <label className="text-sm font-medium text-gray-600">Lead Stage</label>
                       <div className="mt-1">
                                                  <select
-                           value={selectedProfile.row.values[13] || ''}
-                           data-value={selectedProfile.row.values[13] || ''}
+                           value={selectedProfile.row.values[13] === "Hot - manual reply" ? "Hot - Manual Reply" : (selectedProfile.row.values[13] || '')}
+                           data-value={selectedProfile.row.values[13] === "Hot - manual reply" ? "Hot - Manual Reply" : (selectedProfile.row.values[13] || '')}
                            onChange={(e) => {
                              updateCell(selectedProfile.rowIndex, 13, e.target.value);
                              // Update the local state immediately
@@ -1657,11 +1779,15 @@ const CRMDashboard = () => {
                            }}
                            className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] sticky-table-container"
                          >
-                          {columnDefs.editableColumns[13]?.options.map((option, optIndex) => (
-                            <option key={optIndex} value={option}>
-                              {option}
-                            </option>
-                          ))}
+                          {columnDefs.editableColumns[13]?.options.map((option, optIndex) => {
+                            // Fix the case for "Hot - manual reply" to match Google Sheet
+                            const displayOption = option === "Hot - manual reply" ? "Hot - Manual Reply" : option;
+                            return (
+                              <option key={optIndex} value={displayOption}>
+                                {displayOption}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                     </div>

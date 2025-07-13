@@ -285,6 +285,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #ffcfc9 !important;
 }
 
+.sticky-table-container select option[value="Hot - Manual Reply"],
 .sticky-table-container select option[value="Hot - manual reply"] {
   background-color: #B10202 !important;
   color: white !important; /* White text for dark background */
@@ -312,6 +313,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #ffcfc9 !important;
 }
 
+.sticky-table-container select[data-value="Hot - Manual Reply"],
 .sticky-table-container select[data-value="Hot - manual reply"] {
   background-color: #B10202 !important;
   color: white !important;
@@ -393,6 +395,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #ffcfc9 !important;
 }
 
+.profile-modal select option[value="Hot - Manual Reply"],
 .profile-modal select option[value="Hot - manual reply"] {
   background-color: #B10202 !important;
   color: white !important;
@@ -420,6 +423,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #ffcfc9 !important;
 }
 
+.profile-modal select[data-value="Hot - Manual Reply"],
 .profile-modal select[data-value="Hot - manual reply"] {
   background-color: #B10202 !important;
   color: white !important;
@@ -494,4 +498,47 @@ h1, h2, h3, h4, h5, h6 {
 .profile-modal select[data-value="Closed-Lost"] {
   background-color: #3d3d3d !important;
   color: white !important;
+}
+
+/* Tab styles */
+.tab-navigation {
+  scrollbar-width: thin;
+  scrollbar-color: #3e2f1c #f0f0f0;
+}
+
+.tab-navigation::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tab-navigation::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.tab-navigation::-webkit-scrollbar-thumb {
+  background: #3e2f1c;
+  border-radius: 3px;
+}
+
+.tab-navigation::-webkit-scrollbar-thumb:hover {
+  background: #2a1f12;
+}
+
+/* Compact table styles */
+.sticky-table-container table {
+  font-size: 0.75rem;
+}
+
+.sticky-table-container th,
+.sticky-table-container td {
+  padding: 0.375rem !important;
+}
+
+.sticky-table-container tr {
+  height: 2rem;
+}
+
+.sticky-table-container select {
+  padding: 0.25rem !important;
+  font-size: 0.75rem !important;
 }

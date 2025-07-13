@@ -1,7 +1,8 @@
 // src/components/CRMDashboard.jsx (Updated with authentication)
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Phone, Mail, Calendar, User, AlertTriangle, Clock, Flame, LogOut, Settings, Search, Maximize2, Minimize2 } from 'lucide-react';
+import { Bell, X, Phone, Mail, Calendar, User, AlertTriangle, Clock, Flame, LogOut, Settings, Search, Maximize2, Minimize2, Bot } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import AIChatInterface from './AIChatInterface';
 
 // Configuration - Use environment variables for different environments
 const API_BASE_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbwe1tEgKARL6aWD3LdnldHG3JudUFDZihK_2BVxv1LhrviIdFwk5BSZ035dbdDinVEAtg/exec';
@@ -20,6 +21,7 @@ const CRMDashboard = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [newDataIndicator, setNewDataIndicator] = useState(false);
@@ -1086,8 +1088,8 @@ const CRMDashboard = () => {
               {kioskMode ? "Exit Kiosk" : "Full Kiosk"}
             </button>
             
-            {/* Sticky Alert Bell */}
-            <div className={`fixed z-50 dropdown-container ${kioskMode ? 'top-2 right-2' : 'top-4 right-16'}`}>
+            {/* Alert Bell - Now inline */}
+            <div className="relative dropdown-container">
               <button
                 onClick={() => setShowAlerts(!showAlerts)}
                 className="relative p-3 rounded-full bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors"
@@ -1153,6 +1155,16 @@ const CRMDashboard = () => {
                 </div>
               )}
             </div>
+
+            {/* AI Assistant Button - Now inline */}
+            <button
+              onClick={() => setShowAIChat(true)}
+              className="relative p-3 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg border border-purple-500/20 hover:from-purple-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
+              title="AI Analytics Assistant"
+            >
+              <Bot className="w-6 h-6 text-white" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            </button>
 
             {/* User Menu - Hidden in Kiosk Mode */}
             {!kioskMode && (
@@ -2059,6 +2071,13 @@ const CRMDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* AI Chat Interface */}
+      <AIChatInterface
+        sheetData={sheetData}
+        isOpen={showAIChat}
+        onClose={() => setShowAIChat(false)}
+      />
     </div>
   );
 };

@@ -1370,7 +1370,7 @@ const CRMDashboard = () => {
                         ) : (
                           // Regular Display Cells
                           <div className="text-sm">
-                            {colIndex === 0 ? formatDate(cell) : colIndex === 1 ? formatTime(cell) : colIndex === 7 ? formatTime(cell) : (cell || '')}
+                            {colIndex === 0 ? formatDate(cell) : colIndex === 1 ? formatTime(cell) : colIndex === 7 ? formatDate(cell) : (cell || '')}
                           </div>
                         )}
                       </td>
@@ -1614,7 +1614,7 @@ const CRMDashboard = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Desired Date</label>
-                                              <p className="text-[#3e2f1c] font-medium">{formatTime(selectedProfile.row.values[7]) || 'N/A'}</p>
+                                              <p className="text-[#3e2f1c] font-medium">{formatDate(selectedProfile.row.values[7]) || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Guest Count</label>

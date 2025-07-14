@@ -8,12 +8,13 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
     {
       id: 1,
       type: 'ai',
-      content: "Hello! I'm your CRM analytics assistant. I can help you analyze your wedding venue data. Try asking me questions like:\n\n• What's my conversion rate from leads to bookings?\n• How many leads do we get per week on average?\n• What's my most effective lead source?\n• How many weddings have we booked this year?\n\nWhat would you like to know about your business?"
+      content: "Hello! I'm your CRM analytics assistant. I can help you analyze your wedding venue data. What would you like to know about your business?"
     }
   ]);
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Suggested questions for quick access
@@ -49,6 +50,18 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
       category: "Pipeline"
     }
   ];
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
@@ -108,18 +121,20 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col">
+      <div className={`bg-white rounded-lg shadow-xl w-full ${isMobile ? 'h-full max-w-none' : 'max-w-4xl h-[80vh]'} flex flex-col`}>
         {/* Header */}
-        <div className="bg-[#3e2f1c] text-white p-4 rounded-t-lg flex justify-between items-center">
+        <div className={`bg-[#3e2f1c] text-white ${isMobile ? 'p-3' : 'p-4'} rounded-t-lg flex justify-between items-center`}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
               <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold" style={{ fontFamily: 'Cochin, serif' }}>
+              <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`} style={{ fontFamily: 'Cochin, serif' }}>
                 CRM Analytics Assistant
               </h2>
-              <p className="text-sm opacity-80">Ask me anything about your wedding venue data</p>
+              {!isMobile && (
+                <p className="text-sm opacity-80">Ask me anything about your wedding venue data</p>
+              )}
             </div>
           </div>
           <button
@@ -131,7 +146,7 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-3' : 'p-4'} space-y-4`}>
           {messages.map((message) => (
             <div
               key={message.id}
@@ -181,8 +196,8 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggested Questions */}
-        {messages.length === 1 && !isLoading && (
+        {/* Suggested Questions - Hidden on Mobile */}
+        {messages.length === 1 && !isLoading && !isMobile && (
           <div className="p-4 border-t border-gray-200">
             <h3 className="text-sm font-medium text-gray-600 mb-3">Try these questions:</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -202,7 +217,7 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
         )}
 
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-200">
+        <div className={`${isMobile ? 'p-3' : 'p-4'} border-t border-gray-200`}>
           {error && (
             <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
               {error}
@@ -216,7 +231,7 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
               onKeyPress={handleKeyPress}
               placeholder="Ask me about your CRM data... (e.g., 'What's my conversion rate?')"
               className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] resize-none"
-              rows={2}
+              rows={isMobile ? 1 : 2}
               disabled={isLoading}
             />
             <button
@@ -232,9 +247,11 @@ const AIChatInterface = ({ sheetData, isOpen, onClose }) => {
             </button>
           </div>
           
-          <div className="mt-2 text-xs text-gray-500">
-            Press Enter to send, Shift+Enter for new line
-          </div>
+          {!isMobile && (
+            <div className="mt-2 text-xs text-gray-500">
+              Press Enter to send, Shift+Enter for new line
+            </div>
+          )}
         </div>
       </div>
     </div>

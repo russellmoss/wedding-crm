@@ -1,6 +1,6 @@
 // src/components/CRMDashboard.jsx (Updated with authentication)
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Phone, Mail, Calendar, User, AlertTriangle, Clock, Flame, LogOut, Settings, Search, Maximize2, Minimize2, Bot } from 'lucide-react';
+import { Bell, X, Phone, Mail, Calendar, User, AlertTriangle, Clock, Flame, LogOut, Settings, Search, Maximize2, Minimize2, Bot, ChevronLeft, ChevronRight, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AIChatInterface from './AIChatInterface';
 
@@ -35,6 +35,12 @@ const CRMDashboard = () => {
   // Sorting functionality
   const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
   
+  // Mobile navigation and filtering states
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showFilterBottomSheet, setShowFilterBottomSheet] = useState(false);
+  const [mobileTabScrollPosition, setMobileTabScrollPosition] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  
   // Fullscreen functionality
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -45,6 +51,36 @@ const CRMDashboard = () => {
       document.exitFullscreen();
     }
   };
+
+  // Mobile detection and click outside handlers
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Click outside handlers for mobile components
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Close filter bottom sheet when clicking outside
+      if (showFilterBottomSheet && event.target.classList.contains('filter-backdrop')) {
+        closeFilterBottomSheet();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterBottomSheet]);
 
   // Handle fullscreen changes and keyboard shortcuts
   useEffect(() => {
@@ -173,8 +209,82 @@ const CRMDashboard = () => {
     return text.substring(0, maxLength) + '...';
   };
 
+  // Mobile card navigation functions
+  const nextCard = () => {
+    const currentData = getCurrentTabData();
+    setCurrentCardIndex(prev => 
+      prev < currentData.length - 1 ? prev + 1 : prev
+    );
+  };
+
+  const prevCard = () => {
+    setCurrentCardIndex(prev => prev > 0 ? prev - 1 : prev);
+  };
+
+  // Mobile tab scrolling functions
+  const scrollTabLeft = () => {
+    const tabContainer = document.querySelector('.mobile-tab-scroll');
+    if (tabContainer) {
+      tabContainer.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollTabRight = () => {
+    const tabContainer = document.querySelector('.mobile-tab-scroll');
+    if (tabContainer) {
+      tabContainer.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
+  // Mobile filter bottom sheet functions
+  const openFilterBottomSheet = () => {
+    setShowFilterBottomSheet(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeFilterBottomSheet = () => {
+    setShowFilterBottomSheet(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  // Touch gesture handlers for mobile card navigation
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      nextCard();
+    } else if (isRightSwipe) {
+      prevCard();
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
+  // Reset card index when tab changes
+  useEffect(() => {
+    setCurrentCardIndex(0);
+  }, [activeTab]);
+
   // State for organized data
   const [organizedData, setOrganizedData] = useState({});
+
+  // Mobile card view state
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   // Function to organize data by lead stages
   const organizeDataByStages = (data) => {
@@ -959,6 +1069,23 @@ const CRMDashboard = () => {
     }
   };
 
+  // Get lead stage color for cards
+  const getLeadStageColor = (stage) => {
+    if (!stage) return 'bg-gray-100 text-gray-700';
+    
+    const stageLower = stage.toLowerCase();
+    if (stageLower.includes('hot')) {
+      return stageLower.includes('manual') ? 'bg-red-100 text-red-800' : 'bg-red-50 text-red-700';
+    } else if (stageLower.includes('warm')) {
+      return stageLower.includes('no call') ? 'bg-orange-100 text-orange-800' : 'bg-yellow-100 text-yellow-800';
+    } else if (stageLower.includes('cold')) {
+      return 'bg-blue-100 text-blue-800';
+    } else if (stageLower.includes('closed')) {
+      return stageLower.includes('won') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+    }
+    return 'bg-gray-100 text-gray-700';
+  };
+
   // Load data on component mount
   useEffect(() => {
     fetchData();
@@ -1010,11 +1137,164 @@ const CRMDashboard = () => {
         })
       }}
     >
-      {/* Header */}
-      <header className={`bg-white shadow-sm border-b border-[#3e2f1c]/20 ${kioskMode ? 'p-2' : 'p-4'}`}>
-        <div className="flex justify-between items-center">
+      {/* Header - Mobile-First Responsive */}
+      <header className={`bg-white shadow-sm border-b border-[#3e2f1c]/20 ${kioskMode ? 'p-2' : 'p-3 sm:p-4'}`}>
+        {/* Mobile Layout - Stacked */}
+        <div className="block sm:hidden">
+          {/* Title and Status Row */}
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="font-bold text-xl sm:text-2xl" style={{ fontFamily: 'Cochin, serif' }}>
+                {kioskMode ? 'Milea Estate CRM - KIOSK MODE' : 'Milea Estate Vineyard - CRM Dashboard'}
+              </h1>
+              {!kioskMode && (
+                <p className="text-sm text-[#3e2f1c]/70 mt-1 truncate">
+                  Welcome back, {user?.email}
+                </p>
+              )}
+              <div className="flex items-center gap-2 mt-1">
+                <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                <span className="text-[#3e2f1c]/60 text-xs">
+                  {isUpdating ? 'Updating...' : 'Live'}
+                </span>
+                {lastUpdateTime && !kioskMode && (
+                  <span className="text-xs text-[#3e2f1c]/40">
+                    • {lastUpdateTime.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {/* Action Buttons - Compact */}
+            <div className="flex items-center gap-2 ml-3">
+              {/* AI Assistant - Mobile */}
+              <button
+                onClick={() => setShowAIChat(true)}
+                className="flex items-center justify-center w-11 h-11 rounded-lg bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors"
+                title="AI Assistant"
+              >
+                <Bot className="w-5 h-5" />
+              </button>
+
+              {/* Alert Bell - Compact */}
+              <div className="relative dropdown-container">
+                <button
+                  onClick={() => setShowAlerts(!showAlerts)}
+                  className="relative flex items-center justify-center w-11 h-11 rounded-lg bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {alertCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {alertCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Alert Dropdown - Mobile Optimized */}
+                {showAlerts && (
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-[#3e2f1c]/20 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="p-3 border-b border-[#3e2f1c]/20">
+                      <h3 className="font-semibold" style={{ fontFamily: 'Cochin, serif' }}>
+                        Active Alerts ({alertCount})
+                      </h3>
+                    </div>
+                    
+                    {alerts.length === 0 ? (
+                      <div className="p-4 text-gray-500 text-center">
+                        No active alerts
+                      </div>
+                    ) : (
+                      <div className="max-h-80 overflow-y-auto">
+                        {alerts.map((alert) => (
+                          <div key={alert.id} className={`p-3 border-l-4 ${getPriorityColor(alert.priority)} border-b border-gray-100 last:border-b-0`}>
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {getAlertIcon(alert.type)}
+                                  <span className="font-medium text-sm">{alert.title}</span>
+                                </div>
+                                <p className="text-sm text-gray-700 mb-2">{alert.message}</p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(alert.timestamp).toLocaleString()}
+                                </p>
+                                {/* Show full content for daily reports */}
+                                {(alert.type === 'daily_call_list' || alert.type === 'stale_no_call_report' || alert.type === 'stale_no_tour_report') && alert.fullContent && (
+                                  <div className="mt-2">
+                                    <button
+                                      onClick={() => handleAlertClick(alert)}
+                                      className="text-blue-600 hover:text-blue-800 font-medium text-sm underline"
+                                    >
+                                      View Full Report
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => dismissAlert(alert.id)}
+                                className="ml-2 p-2 hover:bg-gray-200 rounded flex-shrink-0"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+
+          
+          {/* Search Bar - Full Width on Mobile */}
+          <div className="relative search-container w-full">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+              />
+            </div>
+            
+            {/* Search Results Dropdown - Mobile Optimized */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                {searchResults.map((result, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSearchResultClick(result)}
+                    className="p-3 hover:bg-[#f5f1e3] cursor-pointer border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-[#3e2f1c] truncate">
+                          {result.firstName} {result.lastName}
+                        </div>
+                        <div className="text-sm text-gray-600 truncate">{result.email}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Submitted: {formatDate(result.submissionDate)} • Stage: {result.leadStage || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                        {result.matchType === 'name' ? '👤' : '📧'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Layout - Horizontal */}
+        <div className="hidden sm:flex justify-between items-center">
           <div>
-            <h1 className={`font-bold ${kioskMode ? 'text-lg' : 'text-3xl'}`} style={{ fontFamily: 'Cochin, serif' }}>
+            <h1 className={`font-bold ${kioskMode ? 'text-lg' : 'text-2xl lg:text-3xl'}`} style={{ fontFamily: 'Cochin, serif' }}>
               {kioskMode ? 'Milea Estate CRM - KIOSK MODE' : 'Milea Estate Vineyard - CRM Dashboard'}
             </h1>
             {!kioskMode && (
@@ -1024,7 +1304,7 @@ const CRMDashboard = () => {
             )}
             <div className="flex items-center gap-2 mt-1">
               <div className={`w-2 h-2 rounded-full ${isUpdating ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-              <span className={`text-[#3e2f1c]/60 ${kioskMode ? 'text-xs' : 'text-xs'}`}>
+              <span className="text-[#3e2f1c]/60 text-xs">
                 {isUpdating ? 'Updating...' : 'Live'}
               </span>
               {lastUpdateTime && !kioskMode && (
@@ -1035,7 +1315,7 @@ const CRMDashboard = () => {
             </div>
           </div>
           
-          {/* Search Bar */}
+          {/* Search Bar - Desktop */}
           <div className={`relative search-container flex-1 ${kioskMode ? 'max-w-xs mx-4' : 'max-w-md mx-8'}`}>
             <div className="relative">
               <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${kioskMode ? 'w-3 h-3' : 'w-4 h-4'}`} />
@@ -1048,7 +1328,7 @@ const CRMDashboard = () => {
               />
             </div>
             
-            {/* Search Results Dropdown */}
+            {/* Search Results Dropdown - Desktop */}
             {showSearchResults && searchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                 {searchResults.map((result, index) => (
@@ -1077,24 +1357,24 @@ const CRMDashboard = () => {
             )}
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Kiosk Mode Toggle */}
+          <div className="flex items-center gap-3 lg:gap-4">
+            {/* Kiosk Mode Toggle - Desktop */}
             <button
               onClick={toggleKioskMode}
-              className="flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors text-sm"
+              className="flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors text-sm min-h-[44px]"
               title={kioskMode ? "Exit Fullscreen Kiosk Mode" : "Enter Fullscreen Kiosk Mode"}
             >
               {kioskMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              {kioskMode ? "Exit Kiosk" : "Full Kiosk"}
+              <span className="hidden lg:inline">{kioskMode ? "Exit Kiosk" : "Full Kiosk"}</span>
             </button>
             
-            {/* Alert Bell - Now inline */}
+            {/* Alert Bell - Desktop */}
             <div className="relative dropdown-container">
               <button
                 onClick={() => setShowAlerts(!showAlerts)}
-                className="relative p-3 rounded-full bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors"
+                className="relative p-3 rounded-lg bg-white shadow-lg border border-[#3e2f1c]/20 hover:bg-[#f5f1e3] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
-                <Bell className="w-6 h-6" />
+                <Bell className="w-5 h-5 lg:w-6 lg:h-6" />
                 {alertCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {alertCount}
@@ -1102,7 +1382,7 @@ const CRMDashboard = () => {
                 )}
               </button>
 
-              {/* Alert Dropdown */}
+              {/* Alert Dropdown - Desktop */}
               {showAlerts && (
                 <div className="absolute right-0 mt-2 w-96 bg-white border border-[#3e2f1c]/20 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
                   <div className="p-3 border-b border-[#3e2f1c]/20">
@@ -1143,7 +1423,7 @@ const CRMDashboard = () => {
                             </div>
                             <button
                               onClick={() => dismissAlert(alert.id)}
-                              className="ml-2 p-1 hover:bg-gray-200 rounded"
+                              className="ml-2 p-2 hover:bg-gray-200 rounded min-h-[32px] min-w-[32px] flex items-center justify-center"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -1156,29 +1436,29 @@ const CRMDashboard = () => {
               )}
             </div>
 
-            {/* AI Assistant Button - Now inline */}
+            {/* AI Assistant Button - Desktop */}
             <button
               onClick={() => setShowAIChat(true)}
-              className="relative p-3 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg border border-purple-500/20 hover:from-purple-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
+              className="relative p-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg border border-purple-500/20 hover:from-purple-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="AI Analytics Assistant"
             >
-              <Bot className="w-6 h-6 text-white" />
+              <Bot className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </button>
 
-            {/* User Menu - Hidden in Kiosk Mode */}
+            {/* User Menu - Desktop */}
             {!kioskMode && (
               <div className="relative dropdown-container">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 p-2 rounded-full hover:bg-[#f5f1e3] transition-colors"
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-[#f5f1e3] transition-colors min-h-[44px]"
                 >
                   <div className="w-8 h-8 bg-[#3e2f1c] rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
                   </div>
                 </button>
 
-                {/* User Dropdown */}
+                {/* User Dropdown - Desktop */}
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-[#3e2f1c]/20 rounded-lg shadow-lg z-50">
                     <div className="p-3 border-b border-[#3e2f1c]/20">
@@ -1189,7 +1469,7 @@ const CRMDashboard = () => {
                     <div className="p-2">
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#f5f1e3] rounded-md transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-3 text-left text-sm hover:bg-[#f5f1e3] rounded-md transition-colors min-h-[44px]"
                       >
                         <LogOut className="w-4 h-4" />
                         Sign Out
@@ -1203,18 +1483,20 @@ const CRMDashboard = () => {
         </div>
       </header>
 
-      {/* New Data Notification */}
+      {/* New Data Notification - Mobile Responsive */}
       {newDataIndicator && (
-        <div className="bg-green-100 border-l-4 border-green-500 p-4 mx-6 mt-4 rounded shadow-sm">
+        <div className="bg-green-100 border-l-4 border-green-500 p-3 sm:p-4 mx-3 sm:mx-6 mt-4 rounded shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-green-800 font-medium">New data available!</span>
-              <span className="text-green-600 text-sm">Your CRM has been updated with the latest information.</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+              <div className="min-w-0">
+                <span className="text-green-800 font-medium text-sm sm:text-base">New data available!</span>
+                <span className="text-green-600 text-xs sm:text-sm block sm:inline sm:ml-2">Your CRM has been updated with the latest information.</span>
+              </div>
             </div>
             <button
               onClick={() => setNewDataIndicator(false)}
-              className="text-green-600 hover:text-green-800"
+              className="text-green-600 hover:text-green-800 p-2 ml-2 flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1222,16 +1504,16 @@ const CRMDashboard = () => {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className={kioskMode ? "p-0 flex flex-col flex-1 overflow-hidden" : "p-6"} style={kioskMode ? { minHeight: 0 } : {}}>
+      {/* Main Content - Mobile Responsive */}
+      <main className={kioskMode ? "p-0 flex flex-col flex-1 overflow-hidden" : "p-3 sm:p-6"} style={kioskMode ? { minHeight: 0 } : {}}>
         {/* Filter Section - Hidden in Kiosk Mode */}
         {!kioskMode && (
-        <div className={`bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 ${kioskMode ? 'p-2 mb-0' : 'p-4 mb-6'}`}>
-          <div className={`flex justify-between items-center ${kioskMode ? 'mb-2' : 'mb-4'}`}>
-            <h3 className={`font-semibold text-[#3e2f1c] ${kioskMode ? 'text-sm' : 'text-lg'}`} style={{ fontFamily: 'Cochin, serif' }}>
+        <div className={`bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 ${kioskMode ? 'p-2 mb-0' : 'p-3 sm:p-4 mb-4 sm:mb-6'}`}>
+          <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 ${kioskMode ? 'mb-2' : 'mb-4'}`}>
+            <h3 className={`font-semibold text-[#3e2f1c] ${kioskMode ? 'text-sm' : 'text-base sm:text-lg'}`} style={{ fontFamily: 'Cochin, serif' }}>
               {kioskMode ? 'Filters' : 'Filters'}
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {activeFilters.length > 0 && !kioskMode && (
                 <span className="text-sm text-gray-600">
                   {activeFilters.length} active filter{activeFilters.length !== 1 ? 's' : ''}
@@ -1239,17 +1521,19 @@ const CRMDashboard = () => {
               )}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors ${kioskMode ? 'text-xs px-2 py-1' : 'text-sm'}`}
+                className={`flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors ${kioskMode ? 'text-xs px-2 py-1' : 'text-sm'} min-h-[44px]`}
               >
                 <Settings className={kioskMode ? "w-3 h-3" : "w-4 h-4"} />
-                {kioskMode ? (showFilters ? 'Hide' : 'Show') : (showFilters ? 'Hide Filters' : 'Show Filters')}
+                <span className="hidden sm:inline">{kioskMode ? (showFilters ? 'Hide' : 'Show') : (showFilters ? 'Hide Filters' : 'Show Filters')}</span>
+                <span className="sm:hidden">{showFilters ? 'Hide' : 'Show'}</span>
               </button>
               {activeFilters.length > 0 && (
                 <button
                   onClick={clearFilters}
-                  className={`px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors ${kioskMode ? 'text-xs px-2 py-1' : 'text-sm'}`}
+                  className={`px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors ${kioskMode ? 'text-xs px-2 py-1' : 'text-sm'} min-h-[44px]`}
                 >
-                  {kioskMode ? 'Clear' : 'Clear All'}
+                  <span className="hidden sm:inline">{kioskMode ? 'Clear' : 'Clear All'}</span>
+                  <span className="sm:hidden">Clear</span>
                 </button>
               )}
             </div>
@@ -1273,23 +1557,23 @@ const CRMDashboard = () => {
 
           {/* Filter Controls */}
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {/* Date Range */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[#3e2f1c]">Date Range</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="date"
                     value={filters.dateRange.start}
                     onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                    className="px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                     placeholder="Start Date"
                   />
                   <input
                     type="date"
                     value={filters.dateRange.end}
                     onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                    className="px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                     placeholder="End Date"
                   />
                 </div>
@@ -1301,7 +1585,7 @@ const CRMDashboard = () => {
                 <select
                   value={filters.leadStage}
                   onChange={(e) => handleFilterChange('leadStage', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                 >
                   <option value="">All Stages</option>
                   <option value="Hot">Hot</option>
@@ -1320,7 +1604,7 @@ const CRMDashboard = () => {
                 <select
                   value={filters.leadStatus1}
                   onChange={(e) => handleFilterChange('leadStatus1', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                 >
                   <option value="">All Statuses</option>
                   <option value="Contacted">Contacted</option>
@@ -1338,7 +1622,7 @@ const CRMDashboard = () => {
                 <select
                   value={filters.leadStatus2}
                   onChange={(e) => handleFilterChange('leadStatus2', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                 >
                   <option value="">All Statuses</option>
                   <option value="Contacted">Contacted</option>
@@ -1356,7 +1640,7 @@ const CRMDashboard = () => {
                 <select
                   value={filters.leadStatus3}
                   onChange={(e) => handleFilterChange('leadStatus3', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                 >
                   <option value="">All Statuses</option>
                   <option value="Contacted">Contacted</option>
@@ -1374,7 +1658,7 @@ const CRMDashboard = () => {
                 <select
                   value={filters.leadStatus4}
                   onChange={(e) => handleFilterChange('leadStatus4', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm min-h-[44px]"
                 >
                   <option value="">All Statuses</option>
                   <option value="Contacted">Contacted</option>
@@ -1391,128 +1675,345 @@ const CRMDashboard = () => {
         )}
 
         <div className={`bg-white rounded-lg shadow-sm border border-[#3e2f1c]/20 overflow-hidden ${kioskMode ? 'flex-1' : ''}`} style={kioskMode ? { minHeight: 0 } : {}}>
-          {/* Tab Navigation */}
+          {/* Tab Navigation - Mobile Responsive */}
           <div className="bg-gray-50 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex overflow-x-auto tab-navigation">
-                {leadStages.map((stage) => {
-                  const stageData = organizedData[stage] || [];
-                  return (
-                    <button
-                      key={stage}
-                      onClick={() => setActiveTab(stage)}
-                      className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                        activeTab === stage
-                          ? 'border-[#3e2f1c] text-[#3e2f1c] bg-white'
-                          : 'border-transparent text-gray-600 hover:text-[#3e2f1c] hover:bg-gray-100'
-                      }`}
-                    >
-                      {stage} ({stageData.length})
-                    </button>
-                  );
-                })}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              {/* Mobile: Stacked layout */}
+              <div className="block sm:hidden">
+                {/* Mobile Tab Navigation with Scroll Controls */}
+                <div className="relative">
+                  {/* Scroll Left Button */}
+                  <button
+                    onClick={scrollTabLeft}
+                    className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-gray-600" />
+                  </button>
+                  
+                  {/* Scroll Right Button */}
+                  <button
+                    onClick={scrollTabRight}
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  </button>
+                  
+                  {/* Scrollable Tab Container */}
+                  <div className="flex overflow-x-auto mobile-tab-scroll pb-2 px-10 scrollbar-hide">
+                    {leadStages.map((stage) => {
+                      const stageData = organizedData[stage] || [];
+                      return (
+                        <button
+                          key={stage}
+                          onClick={() => setActiveTab(stage)}
+                          className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors min-h-[44px] flex items-center gap-2 flex-shrink-0 ${
+                            activeTab === stage
+                              ? 'border-[#3e2f1c] text-[#3e2f1c] bg-white'
+                              : 'border-transparent text-gray-600 hover:text-[#3e2f1c] hover:bg-gray-100'
+                          }`}
+                        >
+                          <span className="truncate">{stage}</span>
+                          <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full flex-shrink-0">
+                            {stageData.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Mobile Sort Toggle */}
+                <div className="flex items-center justify-center gap-2 px-3 py-2 border-t border-gray-200">
+                  <span className="text-xs text-gray-600 font-medium">Sort:</span>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
+                    className="flex items-center gap-1 px-3 py-2 bg-[#3e2f1c] text-white rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px]"
+                    title={`Currently showing ${sortOrder === 'newest' ? 'newest first' : 'oldest first'}. Click to toggle.`}
+                  >
+                    <Calendar className="w-3 h-3" />
+                    {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                  </button>
+                </div>
               </div>
               
-              {/* Sort Toggle Button */}
-              <div className="flex items-center gap-2 px-4 py-2">
-                <span className="text-xs text-gray-600 font-medium">Sort:</span>
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
-                  className="flex items-center gap-1 px-3 py-1 bg-[#3e2f1c] text-white rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors"
-                  title={`Currently showing ${sortOrder === 'newest' ? 'newest first' : 'oldest first'}. Click to toggle.`}
-                >
-                  <Calendar className="w-3 h-3" />
-                  {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
-                </button>
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden sm:flex items-center justify-between w-full">
+                <div className="flex overflow-x-auto tab-navigation">
+                  {leadStages.map((stage) => {
+                    const stageData = organizedData[stage] || [];
+                    return (
+                      <button
+                        key={stage}
+                        onClick={() => setActiveTab(stage)}
+                        className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors min-h-[44px] flex items-center ${
+                          activeTab === stage
+                            ? 'border-[#3e2f1c] text-[#3e2f1c] bg-white'
+                            : 'border-transparent text-gray-600 hover:text-[#3e2f1c] hover:bg-gray-100'
+                        }`}
+                      >
+                        {stage} ({stageData.length})
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Desktop Sort Toggle Button */}
+                <div className="flex items-center gap-2 px-4 py-2">
+                  <span className="text-xs text-gray-600 font-medium">Sort:</span>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
+                    className="flex items-center gap-1 px-3 py-2 bg-[#3e2f1c] text-white rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px]"
+                    title={`Currently showing ${sortOrder === 'newest' ? 'newest first' : 'oldest first'}. Click to toggle.`}
+                  >
+                    <Calendar className="w-3 h-3" />
+                    {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className={`sticky-table-container ${kioskMode ? 'h-full overflow-hidden' : ''}`}>
-            <table className={`w-full ${kioskMode ? 'h-full' : ''}`}>
-              <thead className="sticky top-0 z-30">
-                <tr className="bg-[#3e2f1c] text-white">
-                  {(sheetData.headers || []).slice(0, 26).map((header, index) => (
-                    <th 
-                      key={index} 
-                      className="p-2 text-left text-sm font-medium border-r border-white/20 last:border-r-0"
-                    >
-                      {header || `Column ${String.fromCharCode(65 + index)}`}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {getCurrentTabData().map((row, rowIndex) => (
-                  <tr 
-                    key={rowIndex} 
-                    className="border-b border-gray-200 hover:bg-[#f5f1e3]/50 cursor-pointer"
-                    onClick={() => handleRowClick(row, row.originalIndex)}
+          {/* Tab Content - Mobile Responsive */}
+          <div className={`${kioskMode ? 'h-full overflow-hidden' : ''}`}>
+            {/* Mobile Card View */}
+            <div className="block md:hidden">
+              {(() => {
+                const currentData = getCurrentTabData();
+                if (currentData.length === 0) {
+                  return (
+                    <div className="flex items-center justify-center h-64 text-gray-500">
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">📋</div>
+                        <p className="text-lg font-medium">No leads found</p>
+                        <p className="text-sm">Try adjusting your filters or search terms</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const currentCard = currentData[currentCardIndex];
+                if (!currentCard) return null;
+
+                const values = currentCard.values || [];
+                const firstName = values[2] || '';
+                const lastName = values[3] || '';
+                const email = values[4] || '';
+                const phone = values[5] || '';
+                const leadStage = values[13] || '';
+                const submissionDate = values[0];
+                const message = values[9] || '';
+                const guestCount = values[8] || '';
+                const desiredDate = values[7];
+
+                return (
+                  <div 
+                    className="relative min-h-[60vh] p-4"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                   >
-                    {(row.values || []).slice(0, 26).map((cell, colIndex) => (
-                      <td 
-                        key={colIndex} 
-                        className="p-2 border-r border-gray-200 last:border-r-0"
+                    {/* Card Navigation */}
+                    <div className="flex items-center justify-between mb-4">
+                      <button
+                        onClick={prevCard}
+                        disabled={currentCardIndex === 0}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px]"
                       >
-                        {colIndex === columnDefs.updateColumn ? (
-                          // Update Lead Button (Column O)
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              triggerLeadUpdate(row.originalIndex);
-                            }}
-                            className="bg-[#3e2f1c] text-white px-2 py-1 rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors"
-                          >
-                            📞 Update Lead
-                          </button>
-                        ) : colIndex === 25 ? (
-                          // Start Call Form Button (Column Z)
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openCallForm(row.originalIndex);
-                            }}
-                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors"
-                          >
-                            📞 Start Call Form
-                          </button>
-                        ) : columnDefs.editableColumns[colIndex] ? (
-                          // Editable Dropdown Columns (N, P, Q, R, S)
-                          <select
-                            value={cell === "Hot - manual reply" ? "Hot - Manual Reply" : (cell || '')}
-                            data-value={cell === "Hot - manual reply" ? "Hot - Manual Reply" : (cell || '')}
-                            onChange={(e) => updateCell(row.originalIndex, colIndex, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full p-1 border border-gray-300 rounded text-xs bg-white min-w-[120px] focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c]"
-                          >
-                            {columnDefs.editableColumns[colIndex].options.map((option, optIndex) => {
-                              // Fix the case for "Hot - manual reply" to match Google Sheet
-                              const displayOption = option === "Hot - manual reply" ? "Hot - Manual Reply" : option;
-                              return (
-                                <option key={optIndex} value={displayOption}>
-                                  {displayOption}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        ) : (
-                          // Regular Display Cells with collapsed messages and notes
-                          <div className="text-xs">
-                            {colIndex === 0 ? formatDate(cell) : 
-                             colIndex === 1 ? formatTime(cell) : 
-                             colIndex === 7 ? formatDate(cell) : 
-                             colIndex === 9 ? truncateText(cell, 40) : // Message field - collapsed
-                             colIndex === 19 ? truncateText(cell, 40) : // Notes field - collapsed
-                             (cell || '')}
+                        <ChevronLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">Previous</span>
+                      </button>
+                      
+                      <div className="text-sm text-gray-600">
+                        {currentCardIndex + 1} of {currentData.length}
+                      </div>
+                      
+                      <button
+                        onClick={nextCard}
+                        disabled={currentCardIndex === currentData.length - 1}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#3e2f1c] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px]"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Lead Card */}
+                    <div className="bg-white rounded-lg shadow-lg border border-[#3e2f1c]/20 overflow-hidden">
+                      {/* Card Header */}
+                      <div className="bg-gradient-to-r from-[#3e2f1c] to-[#3e2f1c]/90 text-white p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-xl font-bold">
+                              {firstName} {lastName}
+                            </h3>
+                            <p className="text-sm opacity-90">{email}</p>
+                          </div>
+                          <div className={`px-3 py-1 rounded-full text-xs font-medium ${getLeadStageColor(leadStage)}`}>
+                            {leadStage || 'No Stage'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Content */}
+                      <div className="p-4 space-y-4">
+                        {/* Key Information */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</label>
+                            <p className="text-sm font-medium">{phone || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Guests</label>
+                            <p className="text-sm font-medium">{guestCount || 'Not specified'}</p>
+                          </div>
+                        </div>
+
+                        {/* Submission Date */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Submitted</label>
+                          <p className="text-sm font-medium">{submissionDate ? formatDate(submissionDate) : 'Unknown'}</p>
+                        </div>
+
+                        {/* Desired Date */}
+                        {desiredDate && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Desired Date</label>
+                            <p className="text-sm font-medium">{formatDate(desiredDate)}</p>
                           </div>
                         )}
-                      </td>
+
+                        {/* Message Preview */}
+                        {message && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Message</label>
+                            <p className="text-sm text-gray-700 line-clamp-3">{truncateText(message, 100)}</p>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-3 pt-4 border-t border-gray-200">
+                          <button
+                            onClick={() => handleRowClick(currentCard, currentCard.originalIndex)}
+                            className="w-full bg-[#3e2f1c] text-white py-3 px-4 rounded-lg hover:bg-[#3e2f1c]/80 transition-colors font-medium min-h-[44px]"
+                          >
+                            👁️ View Details
+                          </button>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              onClick={() => triggerLeadUpdate(currentCard.originalIndex)}
+                              className="bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium min-h-[44px]"
+                            >
+                              📞 Update Lead
+                            </button>
+                            <button
+                              onClick={() => openCallForm(currentCard.originalIndex)}
+                              className="bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium min-h-[44px]"
+                            >
+                              📋 Call Form
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Swipe Instructions */}
+                    <div className="text-center mt-4 text-xs text-gray-500">
+                      💡 Swipe left/right to navigate between leads
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <div className={`sticky-table-container ${kioskMode ? 'h-full overflow-hidden' : ''}`}>
+                <table className={`w-full ${kioskMode ? 'h-full' : ''}`}>
+                  <thead className="sticky top-0 z-30">
+                    <tr className="bg-[#3e2f1c] text-white">
+                      {(sheetData.headers || []).slice(0, 26).map((header, index) => (
+                        <th 
+                          key={index} 
+                          className="p-2 text-left text-sm font-medium border-r border-white/20 last:border-r-0"
+                        >
+                          {header || `Column ${String.fromCharCode(65 + index)}`}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getCurrentTabData().map((row, rowIndex) => (
+                      <tr 
+                        key={rowIndex} 
+                        className="border-b border-gray-200 hover:bg-[#f5f1e3]/50 cursor-pointer"
+                        onClick={() => handleRowClick(row, row.originalIndex)}
+                      >
+                        {(row.values || []).slice(0, 26).map((cell, colIndex) => (
+                          <td 
+                            key={colIndex} 
+                            className="p-2 border-r border-gray-200 last:border-r-0"
+                          >
+                            {colIndex === columnDefs.updateColumn ? (
+                              // Update Lead Button (Column O)
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerLeadUpdate(row.originalIndex);
+                                }}
+                                className="bg-[#3e2f1c] text-white px-3 py-2 rounded text-xs hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px] w-full"
+                              >
+                                📞 Update Lead
+                              </button>
+                            ) : colIndex === 25 ? (
+                              // Start Call Form Button (Column Z)
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCallForm(row.originalIndex);
+                                }}
+                                className="bg-blue-600 text-white px-3 py-2 rounded text-xs hover:bg-blue-700 transition-colors min-h-[44px] w-full"
+                              >
+                                📞 Start Call Form
+                              </button>
+                            ) : columnDefs.editableColumns[colIndex] ? (
+                              // Editable Dropdown Columns (N, P, Q, R, S)
+                              <select
+                                value={cell === "Hot - manual reply" ? "Hot - Manual Reply" : (cell || '')}
+                                data-value={cell === "Hot - manual reply" ? "Hot - Manual Reply" : (cell || '')}
+                                onChange={(e) => updateCell(row.originalIndex, colIndex, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full p-2 border border-gray-300 rounded text-xs bg-white min-w-[120px] min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c]"
+                              >
+                                {columnDefs.editableColumns[colIndex].options.map((option, optIndex) => {
+                                  // Fix the case for "Hot - manual reply" to match Google Sheet
+                                  const displayOption = option === "Hot - manual reply" ? "Hot - Manual Reply" : option;
+                                  return (
+                                    <option key={optIndex} value={displayOption}>
+                                      {displayOption}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            ) : (
+                              // Regular Display Cells with collapsed messages and notes
+                              <div className="text-xs">
+                                {colIndex === 0 ? formatDate(cell) : 
+                                 colIndex === 1 ? formatTime(cell) : 
+                                 colIndex === 7 ? formatDate(cell) : 
+                                 colIndex === 9 ? truncateText(cell, 40) : // Message field - collapsed
+                                 colIndex === 19 ? truncateText(cell, 40) : // Notes field - collapsed
+                                 (cell || '')}
+                              </div>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
           
           {/* Kiosk Mode Bottom Controls */}
@@ -1676,38 +2177,38 @@ const CRMDashboard = () => {
 
       {/* Profile Modal */}
       {showProfile && selectedProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto profile-modal">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full h-full sm:max-w-4xl sm:h-auto sm:max-h-[90vh] overflow-y-auto profile-modal mobile-modal">
             {/* Header */}
-            <div className="sticky top-0 bg-[#3e2f1c] text-white p-6 rounded-t-lg">
+            <div className="sticky top-0 bg-[#3e2f1c] text-white p-4 sm:p-6 rounded-t-lg z-10">
               <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold" style={{ fontFamily: 'Cochin, serif' }}>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: 'Cochin, serif' }}>
                     Lead Profile
                   </h2>
-                  <p className="text-sm opacity-80 mt-1">
+                  <p className="text-xs sm:text-sm opacity-80 mt-1 truncate">
                     {selectedProfile.row.values[2]} {selectedProfile.row.values[3]} • {selectedProfile.row.values[4]}
                   </p>
                 </div>
                 <button
                   onClick={closeProfile}
-                  className="text-white hover:text-gray-300 transition-colors"
+                  className="text-white hover:text-gray-300 transition-colors p-2 min-h-[44px] min-w-[44px] flex items-center justify-center ml-3"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-[#3e2f1c] border-b border-gray-200 pb-2">
                     Basic Information
                   </h3>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-600">First Name</label>
                       <p className="text-[#3e2f1c] font-medium">{selectedProfile.row.values[2] || 'N/A'}</p>
@@ -1741,7 +2242,7 @@ const CRMDashboard = () => {
                     Event Details
                   </h3>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-600">Event Type</label>
                       <p className="text-[#3e2f1c] font-medium">{selectedProfile.row.values[6] || 'N/A'}</p>
@@ -1775,22 +2276,22 @@ const CRMDashboard = () => {
                     Lead Status
                   </h3>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-600">Lead Stage</label>
                       <div className="mt-1">
-                                                 <select
-                           value={selectedProfile.row.values[13] === "Hot - manual reply" ? "Hot - Manual Reply" : (selectedProfile.row.values[13] || '')}
-                           data-value={selectedProfile.row.values[13] === "Hot - manual reply" ? "Hot - Manual Reply" : (selectedProfile.row.values[13] || '')}
-                           onChange={(e) => {
-                             updateCell(selectedProfile.rowIndex, 13, e.target.value);
-                             // Update the local state immediately
-                             const newData = [...sheetData.data];
-                             newData[selectedProfile.rowIndex].values[13] = e.target.value;
-                             setSheetData(prev => ({ ...prev, data: newData }));
-                           }}
-                           className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] sticky-table-container"
-                         >
+                                                                         <select
+                          value={selectedProfile.row.values[13] === "Hot - manual reply" ? "Hot - Manual Reply" : (selectedProfile.row.values[13] || '')}
+                          data-value={selectedProfile.row.values[13] === "Hot - manual reply" ? "Hot - Manual Reply" : (selectedProfile.row.values[13] || '')}
+                          onChange={(e) => {
+                            updateCell(selectedProfile.rowIndex, 13, e.target.value);
+                            // Update the local state immediately
+                            const newData = [...sheetData.data];
+                            newData[selectedProfile.rowIndex].values[13] = e.target.value;
+                            setSheetData(prev => ({ ...prev, data: newData }));
+                          }}
+                          className="w-full p-3 sm:p-2 border border-gray-300 rounded text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] min-h-[44px] mobile-filter-input"
+                        >
                           {columnDefs.editableColumns[13]?.options.map((option, optIndex) => {
                             // Fix the case for "Hot - manual reply" to match Google Sheet
                             const displayOption = option === "Hot - manual reply" ? "Hot - Manual Reply" : option;
@@ -1806,17 +2307,17 @@ const CRMDashboard = () => {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Lead Status 1</label>
                       <div className="mt-1">
-                                                 <select
-                           value={selectedProfile.row.values[15] || ''}
-                           data-value={selectedProfile.row.values[15] || ''}
-                           onChange={(e) => {
-                             updateCell(selectedProfile.rowIndex, 15, e.target.value);
-                             const newData = [...sheetData.data];
-                             newData[selectedProfile.rowIndex].values[15] = e.target.value;
-                             setSheetData(prev => ({ ...prev, data: newData }));
-                           }}
-                           className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] sticky-table-container"
-                         >
+                                                                         <select
+                          value={selectedProfile.row.values[15] || ''}
+                          data-value={selectedProfile.row.values[15] || ''}
+                          onChange={(e) => {
+                            updateCell(selectedProfile.rowIndex, 15, e.target.value);
+                            const newData = [...sheetData.data];
+                            newData[selectedProfile.rowIndex].values[15] = e.target.value;
+                            setSheetData(prev => ({ ...prev, data: newData }));
+                          }}
+                          className="w-full p-3 sm:p-2 border border-gray-300 rounded text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] min-h-[44px] mobile-filter-input"
+                        >
                           {columnDefs.editableColumns[15]?.options.map((option, optIndex) => (
                             <option key={optIndex} value={option}>
                               {option}
@@ -1828,17 +2329,17 @@ const CRMDashboard = () => {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Lead Status 2</label>
                       <div className="mt-1">
-                                                 <select
-                           value={selectedProfile.row.values[16] || ''}
-                           data-value={selectedProfile.row.values[16] || ''}
-                           onChange={(e) => {
-                             updateCell(selectedProfile.rowIndex, 16, e.target.value);
-                             const newData = [...sheetData.data];
-                             newData[selectedProfile.rowIndex].values[16] = e.target.value;
-                             setSheetData(prev => ({ ...prev, data: newData }));
-                           }}
-                           className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] sticky-table-container"
-                         >
+                                                                         <select
+                          value={selectedProfile.row.values[16] || ''}
+                          data-value={selectedProfile.row.values[16] || ''}
+                          onChange={(e) => {
+                            updateCell(selectedProfile.rowIndex, 16, e.target.value);
+                            const newData = [...sheetData.data];
+                            newData[selectedProfile.rowIndex].values[16] = e.target.value;
+                            setSheetData(prev => ({ ...prev, data: newData }));
+                          }}
+                          className="w-full p-3 sm:p-2 border border-gray-300 rounded text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] min-h-[44px] mobile-filter-input"
+                        >
                           {columnDefs.editableColumns[16]?.options.map((option, optIndex) => (
                             <option key={optIndex} value={option}>
                               {option}
@@ -1850,17 +2351,17 @@ const CRMDashboard = () => {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Lead Status 3</label>
                       <div className="mt-1">
-                                                 <select
-                           value={selectedProfile.row.values[17] || ''}
-                           data-value={selectedProfile.row.values[17] || ''}
-                           onChange={(e) => {
-                             updateCell(selectedProfile.rowIndex, 17, e.target.value);
-                             const newData = [...sheetData.data];
-                             newData[selectedProfile.rowIndex].values[17] = e.target.value;
-                             setSheetData(prev => ({ ...prev, data: newData }));
-                           }}
-                           className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] sticky-table-container"
-                         >
+                                                                         <select
+                          value={selectedProfile.row.values[17] || ''}
+                          data-value={selectedProfile.row.values[17] || ''}
+                          onChange={(e) => {
+                            updateCell(selectedProfile.rowIndex, 17, e.target.value);
+                            const newData = [...sheetData.data];
+                            newData[selectedProfile.rowIndex].values[17] = e.target.value;
+                            setSheetData(prev => ({ ...prev, data: newData }));
+                          }}
+                          className="w-full p-3 sm:p-2 border border-gray-300 rounded text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] min-h-[44px] mobile-filter-input"
+                        >
                           {columnDefs.editableColumns[17]?.options.map((option, optIndex) => (
                             <option key={optIndex} value={option}>
                               {option}
@@ -1872,17 +2373,17 @@ const CRMDashboard = () => {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Lead Status 4</label>
                       <div className="mt-1">
-                                                 <select
-                           value={selectedProfile.row.values[18] || ''}
-                           data-value={selectedProfile.row.values[18] || ''}
-                           onChange={(e) => {
-                             updateCell(selectedProfile.rowIndex, 18, e.target.value);
-                             const newData = [...sheetData.data];
-                             newData[selectedProfile.rowIndex].values[18] = e.target.value;
-                             setSheetData(prev => ({ ...prev, data: newData }));
-                           }}
-                           className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] sticky-table-container"
-                         >
+                                                                         <select
+                          value={selectedProfile.row.values[18] || ''}
+                          data-value={selectedProfile.row.values[18] || ''}
+                          onChange={(e) => {
+                            updateCell(selectedProfile.rowIndex, 18, e.target.value);
+                            const newData = [...sheetData.data];
+                            newData[selectedProfile.rowIndex].values[18] = e.target.value;
+                            setSheetData(prev => ({ ...prev, data: newData }));
+                          }}
+                          className="w-full p-3 sm:p-2 border border-gray-300 rounded text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] min-h-[44px] mobile-filter-input"
+                        >
                           {columnDefs.editableColumns[18]?.options.map((option, optIndex) => (
                             <option key={optIndex} value={option}>
                               {option}
@@ -1903,7 +2404,7 @@ const CRMDashboard = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-gray-600">Message</label>
-                      <p className="text-[#3e2f1c] mt-1 bg-gray-50 p-3 rounded border">
+                      <p className="text-[#3e2f1c] mt-1 bg-gray-50 p-3 rounded border text-sm">
                         {selectedProfile.row.values[9] || 'No message provided'}
                       </p>
                     </div>
@@ -1919,10 +2420,10 @@ const CRMDashboard = () => {
                           }));
                         }}
                         placeholder="Add notes about this lead..."
-                        className="w-full mt-1 p-3 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] bg-white resize-none"
+                        className="w-full mt-1 p-3 border border-gray-300 rounded text-base focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] bg-white resize-none min-h-[120px] mobile-filter-input"
                         rows={4}
                       />
-                      <div className="mt-2 flex justify-end gap-2">
+                      <div className="mt-3 flex flex-col sm:flex-row gap-2">
                         <button
                           onClick={() => {
                             // Reset to original value
@@ -1931,7 +2432,7 @@ const CRMDashboard = () => {
                               notes: undefined
                             }));
                           }}
-                          className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600 transition-colors"
+                          className="bg-gray-500 text-white px-4 py-3 rounded text-sm hover:bg-gray-600 transition-colors min-h-[44px] mobile-button"
                         >
                           Cancel
                         </button>
@@ -1949,13 +2450,13 @@ const CRMDashboard = () => {
                               notes: undefined
                             }));
                           }}
-                          className="bg-[#3e2f1c] text-white px-4 py-2 rounded text-sm hover:bg-[#3e2f1c]/80 transition-colors"
+                          className="bg-[#3e2f1c] text-white px-4 py-3 rounded text-sm hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px] mobile-button"
                         >
                           Save Notes
                         </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-gray-600">Inquiry Source</label>
                         <p className="text-[#3e2f1c] font-medium">{selectedProfile.row.values[21] || 'N/A'}</p>
@@ -1978,22 +2479,22 @@ const CRMDashboard = () => {
               </div>
 
                              {/* Action Buttons */}
-               <div className="mt-8 flex gap-4 justify-center">
+               <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                  <button
                    onClick={() => triggerLeadUpdate(selectedProfile.rowIndex)}
-                   className="bg-[#3e2f1c] text-white px-6 py-2 rounded hover:bg-[#3e2f1c]/80 transition-colors"
+                   className="bg-[#3e2f1c] text-white px-6 py-3 rounded hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px] mobile-button text-sm sm:text-base"
                  >
                    📞 Update Lead
                  </button>
                  <button
                    onClick={() => openCallForm(selectedProfile.rowIndex)}
-                   className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                   className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition-colors min-h-[44px] mobile-button text-sm sm:text-base"
                  >
                    📞 Start Call Form
                  </button>
                 <button
                   onClick={closeProfile}
-                  className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 transition-colors"
+                  className="bg-gray-500 text-white px-6 py-3 rounded hover:bg-gray-600 transition-colors min-h-[44px] mobile-button text-sm sm:text-base"
                 >
                   Close
                 </button>
@@ -2005,30 +2506,30 @@ const CRMDashboard = () => {
 
       {/* Alert Report Modal */}
       {showAlertModal && selectedAlert && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full h-full sm:max-w-6xl sm:h-auto sm:max-h-[90vh] overflow-y-auto mobile-modal">
             {/* Header */}
-            <div className="sticky top-0 bg-[#3e2f1c] text-white p-6 rounded-t-lg">
+            <div className="sticky top-0 bg-[#3e2f1c] text-white p-4 sm:p-6 rounded-t-lg z-10">
               <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold" style={{ fontFamily: 'Cochin, serif' }}>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: 'Cochin, serif' }}>
                     {selectedAlert.title}
                   </h2>
-                  <p className="text-sm opacity-80 mt-1">
+                  <p className="text-xs sm:text-sm opacity-80 mt-1">
                     Generated on {new Date(selectedAlert.timestamp).toLocaleString()}
                   </p>
                 </div>
                 <button
                   onClick={closeAlertModal}
-                  className="text-white hover:text-gray-300 transition-colors"
+                  className="text-white hover:text-gray-300 transition-colors p-2 min-h-[44px] min-w-[44px] flex items-center justify-center ml-3"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {/* Summary */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-[#3e2f1c] mb-3">Summary</h3>
@@ -2050,21 +2551,214 @@ const CRMDashboard = () => {
               )}
 
               {/* Action Buttons */}
-              <div className="mt-8 flex gap-4 justify-center">
+              <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                 <button
                   onClick={() => {
                     dismissAlert(selectedAlert.id);
                     closeAlertModal();
                   }}
-                  className="bg-[#3e2f1c] text-white px-6 py-2 rounded hover:bg-[#3e2f1c]/80 transition-colors"
+                  className="bg-[#3e2f1c] text-white px-6 py-3 rounded hover:bg-[#3e2f1c]/80 transition-colors min-h-[44px] mobile-button text-sm sm:text-base"
                 >
                   Dismiss Report
                 </button>
                 <button
                   onClick={closeAlertModal}
-                  className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 transition-colors"
+                  className="bg-gray-500 text-white px-6 py-3 rounded hover:bg-gray-600 transition-colors min-h-[44px] mobile-button text-sm sm:text-base"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Filter Bottom Sheet */}
+      {showFilterBottomSheet && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:hidden filter-backdrop">
+          <div className="bg-white rounded-t-2xl w-full max-h-[90vh] overflow-y-auto filter-bottom-sheet mobile-modal">
+            {/* Handle Bar */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[#3e2f1c]" style={{ fontFamily: 'Cochin, serif' }}>
+                  Filters & Search
+                </h3>
+                <button
+                  onClick={closeFilterBottomSheet}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Active Filters */}
+              {activeFilters.length > 0 && (
+                <div className="mt-3 p-3 bg-[#f5f1e3] rounded-lg">
+                  <div className="flex flex-wrap gap-2">
+                    {activeFilters.map((filter, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-[#3e2f1c] text-white text-xs rounded-full"
+                      >
+                        {filter}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Filter Content */}
+            <div className="px-6 py-4 space-y-6">
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-base"
+                  />
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Date Range</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="date"
+                    value={filters.dateRange.start}
+                    onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={filters.dateRange.end}
+                    onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Lead Stage */}
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Lead Stage</label>
+                <select
+                  value={filters.leadStage}
+                  onChange={(e) => handleFilterChange('leadStage', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                >
+                  <option value="">All Stages</option>
+                  <option value="Hot">Hot</option>
+                  <option value="Hot - Manual Reply">Hot - Manual Reply</option>
+                  <option value="Warm - no call">Warm - no call</option>
+                  <option value="Warm - no tour">Warm - no tour</option>
+                  <option value="Cold">Cold</option>
+                  <option value="Closed-Won">Closed-Won</option>
+                  <option value="Closed-Lost">Closed-Lost</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+
+              {/* Lead Statuses */}
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Lead Status 1</label>
+                <select
+                  value={filters.leadStatus1}
+                  onChange={(e) => handleFilterChange('leadStatus1', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Contacted & Communicated">Contacted & Communicated</option>
+                  <option value="Tour Scheduled">Tour Scheduled</option>
+                  <option value="Proposal Sent">Proposal Sent</option>
+                  <option value="Closed-Won">Closed-Won</option>
+                  <option value="Closed-Lost">Closed-Lost</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Lead Status 2</label>
+                <select
+                  value={filters.leadStatus2}
+                  onChange={(e) => handleFilterChange('leadStatus2', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Contacted & Communicated">Contacted & Communicated</option>
+                  <option value="Tour Scheduled">Tour Scheduled</option>
+                  <option value="Proposal Sent">Proposal Sent</option>
+                  <option value="Closed-Won">Closed-Won</option>
+                  <option value="Closed-Lost">Closed-Lost</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Lead Status 3</label>
+                <select
+                  value={filters.leadStatus3}
+                  onChange={(e) => handleFilterChange('leadStatus3', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Contacted & Communicated">Contacted & Communicated</option>
+                  <option value="Tour Scheduled">Tour Scheduled</option>
+                  <option value="Proposal Sent">Proposal Sent</option>
+                  <option value="Closed-Won">Closed-Won</option>
+                  <option value="Closed-Lost">Closed-Lost</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3e2f1c] mb-2">Lead Status 4</label>
+                <select
+                  value={filters.leadStatus4}
+                  onChange={(e) => handleFilterChange('leadStatus4', e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c] focus:border-[#3e2f1c] text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Contacted & Communicated">Contacted & Communicated</option>
+                  <option value="Tour Scheduled">Tour Scheduled</option>
+                  <option value="Proposal Sent">Proposal Sent</option>
+                  <option value="Closed-Won">Closed-Won</option>
+                  <option value="Closed-Lost">Closed-Lost</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    clearFilters();
+                    setSearchQuery('');
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => {
+                    applyFilters();
+                    closeFilterBottomSheet();
+                  }}
+                  className="flex-1 px-4 py-3 bg-[#3e2f1c] text-white rounded-lg hover:bg-[#3e2f1c]/80 transition-colors text-sm font-medium"
+                >
+                  Apply Filters
                 </button>
               </div>
             </div>

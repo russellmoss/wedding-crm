@@ -33,22 +33,22 @@ const ForgotPasswordForm = ({ onBack }) => {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: 'Cochin, serif' }}>
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ fontFamily: 'Cochin, serif' }}>
           Reset Password
         </h1>
-        <p className="text-[#3e2f1c]/70">Enter your email to receive a reset link</p>
+        <p className="text-sm sm:text-base text-[#3e2f1c]/70">Enter your email to receive a reset link</p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 text-red-700 text-sm">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-700 text-sm">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 text-green-700 text-sm">
             {success}
           </div>
         )}
@@ -61,10 +61,12 @@ const ForgotPasswordForm = ({ onBack }) => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-[#3e2f1c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c]/20 focus:border-[#3e2f1c]"
+              className="w-full pl-10 pr-4 py-4 sm:py-3 border border-[#3e2f1c]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3e2f1c]/20 focus:border-[#3e2f1c] text-base min-h-[44px]"
               placeholder="Enter your email"
               disabled={loading}
               onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
+              autoComplete="email"
+              inputMode="email"
             />
           </div>
         </div>
@@ -72,7 +74,7 @@ const ForgotPasswordForm = ({ onBack }) => {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full bg-[#3e2f1c] text-white py-3 rounded-lg hover:bg-[#3e2f1c]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-[#3e2f1c] text-white py-4 sm:py-3 rounded-lg hover:bg-[#3e2f1c]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 min-h-[44px] text-base font-medium"
         >
           {loading ? (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -88,7 +90,7 @@ const ForgotPasswordForm = ({ onBack }) => {
       <div className="mt-6 text-center">
         <button
           onClick={onBack}
-          className="text-[#3e2f1c] hover:underline text-sm flex items-center gap-1 mx-auto"
+          className="text-[#3e2f1c] hover:underline text-sm flex items-center gap-1 mx-auto py-2 min-h-[44px]"
           disabled={loading}
         >
           <ArrowLeft className="w-4 h-4" />

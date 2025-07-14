@@ -197,7 +197,8 @@ const CRMDashboard = () => {
     leadStatus1: '',
     leadStatus2: '',
     leadStatus3: '',
-    leadStatus4: ''
+    leadStatus4: '',
+    showEnrichedOnly: false
   });
   const [showFilters, setShowFilters] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
@@ -483,6 +484,12 @@ const CRMDashboard = () => {
       }
     });
 
+    // Enriched leads filter
+    if (filters.showEnrichedOnly) {
+      filtered = filtered.filter(row => row.isEnriched);
+      newActiveFilters.push('Enriched Leads Only');
+    }
+
     setFilteredData(filtered);
     setActiveFilters(newActiveFilters);
   };
@@ -495,7 +502,8 @@ const CRMDashboard = () => {
       leadStatus1: '',
       leadStatus2: '',
       leadStatus3: '',
-      leadStatus4: ''
+      leadStatus4: '',
+      showEnrichedOnly: false
     });
     setFilteredData([]);
     setActiveFilters([]);
@@ -798,6 +806,12 @@ const CRMDashboard = () => {
       ]);
       
       console.log('Data loaded successfully:', { dataJson, colJson, alertJson });
+      
+      // Debug enriched rows
+      if (dataJson.data) {
+        const enrichedRows = dataJson.data.filter(row => row.isEnriched);
+        console.log('Enriched rows found:', enrichedRows.length, enrichedRows);
+      }
       
       // Check if we have new data
       const hasNewData = showIndicator && (
@@ -1555,6 +1569,8 @@ const CRMDashboard = () => {
             </div>
           )}
 
+
+
           {/* Filter Controls */}
           {showFilters && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -1668,6 +1684,23 @@ const CRMDashboard = () => {
                   <option value="Closed-Won">Closed-Won</option>
                   <option value="Closed-Lost">Closed-Lost</option>
                 </select>
+              </div>
+
+              {/* Enriched Leads Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#3e2f1c]">Enriched Leads</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="enrichedFilter"
+                    checked={filters.showEnrichedOnly}
+                    onChange={(e) => handleFilterChange('showEnrichedOnly', e.target.checked)}
+                    className="w-4 h-4 text-[#3e2f1c] border-gray-300 rounded focus:ring-[#3e2f1c] focus:ring-2"
+                  />
+                  <label htmlFor="enrichedFilter" className="text-sm text-gray-700">
+                    Show enriched leads only
+                  </label>
+                </div>
               </div>
             </div>
           )}
@@ -1943,12 +1976,20 @@ const CRMDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {getCurrentTabData().map((row, rowIndex) => (
-                      <tr 
-                        key={rowIndex} 
-                        className="border-b border-gray-200 hover:bg-[#f5f1e3]/50 cursor-pointer"
-                        onClick={() => handleRowClick(row, row.originalIndex)}
-                      >
+                    {getCurrentTabData().map((row, rowIndex) => {
+                      // Debug enriched rows
+                      if (row.isEnriched) {
+                        console.log('Rendering enriched row:', rowIndex, row);
+                      }
+                      
+                      return (
+                        <tr 
+                          key={rowIndex} 
+                          className={`border-b border-gray-200 hover:bg-[#f5f1e3]/50 cursor-pointer ${
+                            row.isEnriched ? 'bg-[#fff2cc]' : ''
+                          }`}
+                          onClick={() => handleRowClick(row, row.originalIndex)}
+                        >
                         {(row.values || []).slice(0, 26).map((cell, colIndex) => (
                           <td 
                             key={colIndex} 
@@ -1997,20 +2038,30 @@ const CRMDashboard = () => {
                               </select>
                             ) : (
                               // Regular Display Cells with collapsed messages and notes
-                              <div className="text-xs">
-                                {colIndex === 0 ? formatDate(cell) : 
-                                 colIndex === 1 ? formatTime(cell) : 
-                                 colIndex === 7 ? formatDate(cell) : 
-                                 colIndex === 9 ? truncateText(cell, 40) : // Message field - collapsed
-                                 colIndex === 19 ? truncateText(cell, 40) : // Notes field - collapsed
-                                 (cell || '')}
+                              <div className="text-xs relative">
+                                {colIndex === 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    {row.isEnriched && (
+                                      <div 
+                                        className="w-2 h-2 bg-yellow-400 rounded-full flex-shrink-0" 
+                                        title="This lead has been enriched with additional data from duplicate entries"
+                                      />
+                                    )}
+                                    {formatDate(cell)}
+                                  </div>
+                                ) : colIndex === 1 ? formatTime(cell) : 
+                                   colIndex === 7 ? formatDate(cell) : 
+                                   colIndex === 9 ? truncateText(cell, 40) : // Message field - collapsed
+                                   colIndex === 19 ? truncateText(cell, 40) : // Notes field - collapsed
+                                   (cell || '')}
                               </div>
                             )}
                           </td>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
+                                            );
+                      })}
+                      </tbody>
                 </table>
               </div>
             </div>
